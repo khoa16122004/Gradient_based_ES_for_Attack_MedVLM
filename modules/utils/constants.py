@@ -18,9 +18,17 @@ IMG_STD = 0.27950088968644304
 BIOMEDCLIP_MEAN = [0.48145466, 0.4578275, 0.40821073]
 BIOMEDCLIP_STD = [0.26862954, 0.26130258, 0.27577711]
 
+
+
+
 # Entrep
 ENTREP_MEAN = [0.485, 0.456, 0.406]
 ENTREP_STD = [0.229, 0.224, 0.225]
+
+
+#ViT
+VIT_MEAN = (0.48145466, 0.4578275, 0.40821073) 
+VIT_STD = (0.26862954, 0.26130258, 0.27577711)
 
 
 # Dataset paths
@@ -338,7 +346,26 @@ SIZE_TRANSFORM = {
             transforms.Lambda(lambda x: x.convert("RGB")),
             transforms.Resize((IMG_SIZE, IMG_SIZE)),
         ]
-    )
+    ),
+
+    'ViT-B-32': transforms.Compose(
+        [
+            transforms.Lambda(lambda x: x.convert("RGB")),
+            transforms.Resize((IMG_SIZE, IMG_SIZE)),
+        ]
+    ),
+    'ViT-B-16': transforms.Compose(
+        [
+            transforms.Lambda(lambda x: x.convert("RGB")),
+            transforms.Resize((IMG_SIZE, IMG_SIZE)),
+        ]
+    ),
+    'ViT-L-14': transforms.Compose(
+        [
+            transforms.Lambda(lambda x: x.convert("RGB")),
+            transforms.Resize((IMG_SIZE, IMG_SIZE)),
+        ]
+    ),
 }
 TENSOR_NORMALIZE_TRANSFORM = {
     'medclip': transforms.Compose(
@@ -364,6 +391,21 @@ TENSOR_NORMALIZE_TRANSFORM = {
     'entrep': transforms.Compose(
         [
             transforms.Normalize(mean=ENTREP_MEAN, std=ENTREP_STD)
+        ]
+    ),
+    'ViT-B-32': transforms.Compose(
+        [
+            transforms.Normalize(mean=VIT_MEAN, std=VIT_STD)
+        ]
+    ),
+    'ViT-B-16': transforms.Compose(
+        [
+            transforms.Normalize(mean=VIT_MEAN, std=VIT_STD)
+        ]
+    ),
+    'ViT-L-14': transforms.Compose(
+        [
+            transforms.Normalize(mean=VIT_MEAN, std=VIT_STD)
         ]
     )
 }

@@ -8,10 +8,7 @@ for medical image analysis, including MedCLIP and BioMedCLIP.
 # Base classes
 from .attack import (
     BaseAttack,
-    ES_1_Lambda,    # NESAttack,
-    ES_1_Lambda_visual,
-    NESAttack,
-    RandomSearch
+    ES_1_Lambda,    
 )
 
 # MedCLIP models
@@ -35,7 +32,6 @@ __version__ = "0.1.0"
 __all__ = [
     BaseAttack,
     ES_1_Lambda,    # ESAttack,
-    ES_1_Lambda_visual,
     
     EvaluatePerturbation,
     

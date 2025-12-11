@@ -31,6 +31,11 @@ from .entrep import (
     ENTRepModel
 )
 
+from .vit import (
+    ViTModel
+)
+
+
 # Import constants
 from ..utils.constants import SUPPORTED_MODELS, DEFAULT_TEMPLATES
 from ..utils import logging_config
@@ -52,6 +57,9 @@ class ModelFactory:
         },
         'entrep': {
             'base': ENTRepModel,
+        },
+        'ViT': {
+            'base': ViTModel,
         }
     }
     
@@ -272,31 +280,36 @@ class ModelFactory:
             >>> # Create BioMedCLIP model
             >>> model = ModelFactory.create_model('biomedclip')
         """
-        # 1. Validate inputs
-        cls._validate_model_type(model_type, variant)
+        if model_type == 'ViT':
+            model_name = variant # ViT-B-32, ViT-B-16, ViT-L-14
+            model_class = cls.MODEL_REGISTRY['ViT']['base']
+            model = model_class(model_name)
+        else:
+            # 1. Validate inputs
+            cls._validate_model_type(model_type, variant)
+            
+            # 2. Get model class
+            model_class = cls.MODEL_REGISTRY[model_type][variant]
+            
+            # 3. Prepare configuration
+            config = cls._prepare_model_config(model_type, checkpoint, **kwargs)
+            
+            # IMPORTANT: Add pretrained flag to config for ENTRep
+            if model_type == 'entrep':
+                config['pretrained'] = pretrained
+            
+            # 4. Instantiate model
+            model = cls._instantiate_model(model_type, model_class, config)
+            
+            # 5. Load pretrained weights
+            cls._load_pretrained_weights(model, model_type, checkpoint, pretrained)
+            
+            # 6. Move to device
+            if device is None:
+                device = 'cuda' if torch.cuda.is_available() else 'cpu'
         
-        # 2. Get model class
-        model_class = cls.MODEL_REGISTRY[model_type][variant]
-        
-        # 3. Prepare configuration
-        config = cls._prepare_model_config(model_type, checkpoint, **kwargs)
-        
-        # IMPORTANT: Add pretrained flag to config for ENTRep
-        if model_type == 'entrep':
-            config['pretrained'] = pretrained
-        
-        # 4. Instantiate model
-        model = cls._instantiate_model(model_type, model_class, config)
-        
-        # 5. Load pretrained weights
-        cls._load_pretrained_weights(model, model_type, checkpoint, pretrained)
-        
-        # 6. Move to device
-        if device is None:
-            device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        
-        model = model.to(torch.device(device))
-        logger.info(f"🔧 Model moved to device: {device}")
+        model = model.cuda()
+        # logger.info(f"🔧 Model moved to device: {cu}")
         
         return model
     

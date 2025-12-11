@@ -7,8 +7,57 @@ from .logging_config import get_logger
 from torch import nn
 import numpy as np
 import torch
+import open_clip
 
 logger = get_logger(__name__)
+
+def load_open_clip_model(args, device):
+    """
+    Load open_clip + optional custom checkpoint.
+    """
+    model, _, preprocess = open_clip.create_model_and_transforms(
+        args.model_name,
+        pretrained="openai",
+    )
+    model.to(device)
+
+    if args.pretrained is not None and len(args.pretrained) > 0:
+        print(f"Loading custom checkpoint from: {args.pretrained}")
+        ckpt = torch.load(args.pretrained, map_location="cpu")
+        state_dict = _strip_prefix_from_state_dict(ckpt)
+        missing, unexpected = model.load_state_dict(state_dict, strict=True)
+        print("Missing keys:", missing)
+        print("Unexpected keys:", unexpected)
+
+    model.eval()
+    tokenizer = open_clip.get_tokenizer(args.model_name)
+
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f"Total parameters: {total_params:,}")
+
+    return model, preprocess, tokenizer
+
+
+def _extract_label(dict_label):
+    for i, (class_name, is_gt) in enumerate(dict_label.items()):
+        if is_gt == 1:
+            return i
+
+
+def _strip_prefix_from_state_dict(sd, prefixes=('visual.')):
+
+    if isinstance(sd, dict) and 'state_dict' in sd and isinstance(sd['state_dict'], dict):
+        sd = sd['state_dict']
+
+    new_sd = OrderedDict()
+    for k, v in sd.items():
+        nk = k
+        # Bỏ lần lượt các prefix nếu có
+        for p in prefixes:
+            if nk.startswith(p):
+                nk = nk[len(p):]
+        new_sd[nk] = v
+    return new_sd
 
 def setup_seed(seed: int = 42):
     """
