@@ -27,9 +27,9 @@ def main(args):
         transform=None
     )
 
-
     # ========= class_prompt_based ========= #
     class_prompts = RSNA_CLASS_PROMPTS
+    num_classes = len(class_prompts)
 
     # ========= Model ========= #
     if args.model_name in ['medclip', 'biomedclip']:
@@ -38,32 +38,34 @@ def main(args):
             variant='base',
             pretrained=True
         )
-
     elif args.model_name in ['ViT-B-32', 'ViT-B-16', 'ViT-L-14']:
         model = ModelFactory.create_model(
             model_type='ViT',
             variant=args.model_name,
-        )    
+        )
     else:
         raise NotImplementedError(f"Model {args.model_name} not implemented.")
 
-    # ========= evaluate ========
-    class_features = [] 
-    for class_name, item in class_prompts.items(): 
+    # ========= compute class features ========= #
+    class_features = []
+    for class_name, item in class_prompts.items():
         text_feats = model.encode_text(item)
-        mean_feats = text_feats.mean(dim=0)
-        class_features.append(mean_feats) 
-    class_features = torch.stack(class_features) # NUM_ClASS x D 
+        class_features.append(text_feats.mean(dim=0))
+    class_features = torch.stack(class_features)
 
-    # ========= Evaluate Performance ========= #
+    # ========= Track performance ========= #
     total = 0
     correct = 0
     correct_samples = []
 
-    # ensure output folder
+    class_total = [0] * num_classes
+    class_correct = [0] * num_classes
+
+    # ========= Prepare output folder ========= #
     os.makedirs("evaluate_result", exist_ok=True)
     json_path = f"evaluate_result/{args.model_name}.json"
 
+    # ========= Evaluation loop ========= #
     for i in tqdm(range(0, len(dataset), args.batch_size)):
         images_batch = []
         labels_batch = []
@@ -87,11 +89,16 @@ def main(args):
             sims = image_feats @ class_features.T
             pred_id = sims.argmax(dim=1)
 
-        # ===== accuracy ===== #
+        # ===== overall accuracy ===== #
         total += labels_batch.size(0)
         correct_mask = (pred_id == labels_batch)
-
         correct += correct_mask.sum().item()
+
+        # ===== per-class accuracy ===== #
+        for gt, pred in zip(labels_batch, pred_id):
+            class_total[int(gt)] += 1
+            if gt == pred:
+                class_correct[int(gt)] += 1
 
         # ===== save correct samples ===== #
         for idx, ok in enumerate(correct_mask):
@@ -102,28 +109,34 @@ def main(args):
                     "pred_id": int(pred_id[idx].item())
                 })
 
+    # ========= Compute overall accuracy ========= #
     acc = correct / total
-    print(f"Accuracy: {acc * 100:.2f}%")
-    # ===== write to JSON ===== #
+    print(f"\nOverall Accuracy: {acc * 100:.2f}%\n")
+
+    # ========= Print class-wise performance ========= #
+    print("===== Class-wise Performance =====")
+    for c in range(num_classes):
+        if class_total[c] > 0:
+            acc_c = class_correct[c] / class_total[c]
+            print(f"Class {c}: {acc_c * 100:.2f}%  ({class_correct[c]}/{class_total[c]})")
+        else:
+            print(f"Class {c}: No samples")
+
+    # ========= Write JSON ========= #
     with open(json_path, "w") as f:
         json.dump(correct_samples, f, indent=4)
 
-    print(f"Saved correct samples to {json_path}")
+    print(f"\nSaved correct samples to {json_path}")
 
 
 def get_args():
     parser = argparse.ArgumentParser(description="Clean Performance Evaluation")
-    parser.add_argument("--dataset_name", type=str, required=True,
-                        help="Name of dataset (e.g., rsna, chestxray, etc.)")
-    parser.add_argument("--model_name", type=str, required=True)    
+    parser.add_argument("--dataset_name", type=str, required=True)
+    parser.add_argument("--model_name", type=str, required=True)
     parser.add_argument('--batch_size', type=int, default=64)
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = get_args()
     main(args)
-    
-
-        
