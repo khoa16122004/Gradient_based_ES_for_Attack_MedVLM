@@ -123,19 +123,11 @@ RSNA_CLASS_PROMPTS = {
     'Pneumonia': [
         "lung opacities",
         "focal consolidation",
-        "patchy airspace opacity",
-        "increased lung density",
         "pulmonary infiltrates",
-        "interstitial opacity",
-        "alveolar opacity",
         "pleural effusion",
-        "parenchymal opacity"
     ],
     'Normal': [
         "lungs clear",
-        "no focal consolidation",
-        "no pleural effusion",
-        "no pulmonary edema",
         "no lung opacity",
         "normal chest radiograph",
         "no pulmonary"
