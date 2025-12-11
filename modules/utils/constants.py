@@ -343,22 +343,22 @@ SIZE_TRANSFORM = {
     'ViT-B-32': transforms.Compose(
         [
             transforms.Lambda(lambda x: x.convert("RGB")),
-            transforms.CenterCrop(IMG_SIZE), 
             transforms.Resize((IMG_SIZE, IMG_SIZE)),
+            transforms.CenterCrop((IMG_SIZE, IMG_SIZE)), 
         ]
     ),
     'ViT-B-16': transforms.Compose(
         [
             transforms.Lambda(lambda x: x.convert("RGB")),
-            transforms.CenterCrop(IMG_SIZE), 
             transforms.Resize((IMG_SIZE, IMG_SIZE)),
+            transforms.CenterCrop((IMG_SIZE, IMG_SIZE)), 
         ]
     ),
     'ViT-L-14': transforms.Compose(
         [
             transforms.Lambda(lambda x: x.convert("RGB")),
-            transforms.CenterCrop(IMG_SIZE), 
             transforms.Resize((IMG_SIZE, IMG_SIZE)),
+            transforms.CenterCrop((IMG_SIZE, IMG_SIZE)), 
         ]
     ),
 }

@@ -5,7 +5,7 @@ from tqdm import tqdm
 import numpy as np
 import torch
 import json
-from modules.attack.attack import ES_1_Lambda
+from modules.attack.attack import ES_1_Lambda, PGDAttack
 from modules.attack.evaluator import EvaluatePerturbation
 from modules.attack.util import seed_everything 
 from modules.utils.helpers import _extract_label, load_open_clip_model
@@ -75,7 +75,14 @@ def main(args):
     )
     
     # path dir save
-    save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, "attack_name={args.attacker_name}_epsilon={args.epsilon}_norm={args.norm}_mode={args.mode}_seed={args.seed}")
+    if args.attacker_name == "ES_1_Lambda":
+        # ko có lkambda mặt định là 50
+        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_lamda={args.lamda}_norm={args.norm}_seed={args.seed}")
+    elif args.attacker_name == "PGD":
+        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_steps={args.PGD_steps}_alpha={args.alpha}_norm={args.norm}_seed={args.seed}")
+    # guidded by gradient to be contibnue
+
+
     os.makedirs(save_dir, exist_ok=True)
     
     
@@ -88,7 +95,14 @@ def main(args):
             max_evaluation=args.max_evaluation,
             lam=args.lamda
         )
-        
+    if args.attacker_name == "PGD":
+        attacker = PGDAttack(
+            eps=args.epsilon,
+            alpha=args.alpha,
+            norm=args.norm,
+            steps=args.PGD_steps,
+            evaluator=evaluator
+        )
     
     # ============ size transform ===========
     size_transform = SIZE_TRANSFORM[args.model_name]
@@ -174,6 +188,7 @@ def get_args():
                         help="Norm constraint type")
     parser.add_argument("--max_evaluation", type=int, default=10000)
     parser.add_argument("--PGD_steps", type=int, default=100)
+    parser.add_argument("--alpha", type=float, default=0.01)
     parser.add_argument("--lamda", type=int, default=50)
     parser.add_argument("--start_idx", type=int, default=0)
     parser.add_argument("--end_idx", type=int, default=None)

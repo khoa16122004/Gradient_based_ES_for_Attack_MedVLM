@@ -67,11 +67,7 @@ class EvaluatePerturbation:
         adv_imgs = self.img_tensor + perturbations_
         adv_imgs = torch.clamp(adv_imgs, 0, 1)
                 
-        if self.mode == "post_transform":
-            adv_feats = self.model.encode_posttransform_image(adv_imgs)  # (B, D)
-        
-        elif self.mode == "pre_transform":
-            adv_feats = self.model.encode_pretransform_image(adv_imgs)  # (B, D)
+        adv_feats = self.model.encode_posttransform_image(adv_imgs)  # (B, D)
         
         sims = adv_feats @ self.class_text_feats.T     # (B, NUM_CLASSES)
         # Correct class similarity

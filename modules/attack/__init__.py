@@ -9,6 +9,7 @@ for medical image analysis, including MedCLIP and BioMedCLIP.
 from .attack import (
     BaseAttack,
     ES_1_Lambda,    
+    PGDAttack
 )
 
 # MedCLIP models
@@ -32,7 +33,7 @@ __version__ = "0.1.0"
 __all__ = [
     BaseAttack,
     ES_1_Lambda,    # ESAttack,
-    
+    PGDAttack,
     EvaluatePerturbation,
     
     clamp_eps,
