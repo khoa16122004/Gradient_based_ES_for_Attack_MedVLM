@@ -106,6 +106,8 @@ class ViTModel(nn.Module):
         # images_ = torch.round(images * 255.0).clamp(0, 255)
         # Resize to model input size
         image_tensors = F.interpolate(images, size=(224, 224), mode="bilinear", align_corners=False)
+        center_crop = T.CenterCrop(224)
+        image_tensors = center_crop(image_tensors)
         image_tensors = self.normalize_transform(image_tensors)
         
         image_features = self.model.encode_image(image_tensors)
