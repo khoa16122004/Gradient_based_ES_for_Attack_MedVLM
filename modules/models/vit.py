@@ -93,19 +93,6 @@ class ViTModel(nn.Module):
         self,
         images: torch.Tensor
     ) -> torch.Tensor:
-        """
-        Encode image inputs to embeddings.
-        
-        Args:
-            images: Image tensor, PIL Image, or list of PIL Images
-            normalize: Whether to normalize the embeddings
-            
-        Returns:
-            Image embeddings tensor
-        """
-        # Handle different input types
-        # images_ = torch.round(images * 255.0).clamp(0, 255)
-        # Resize to model input size
         image_tensors = F.interpolate(images, size=(224, 224), mode="bilinear", align_corners=False)
         center_crop = T.CenterCrop(224)
         image_tensors = center_crop(image_tensors)
