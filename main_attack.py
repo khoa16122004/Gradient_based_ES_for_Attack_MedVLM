@@ -90,6 +90,9 @@ def main(args):
         )
         
     
+    # ============ size transform ===========
+    size_transform = SIZE_TRANSFORM[args.model_name]
+
 
     # --------------------------- Main LOOP ------------------ 
     for index in tqdm(indxs):
@@ -97,9 +100,9 @@ def main(args):
         label_id = _extract_label(label_dict)
 
 
-        img_attack = img.convert("RGB")
+        img_attack = size_transform(img).convert("RGB")
         img_attack_tensor = _toTensor(img_attack).unsqueeze(0).cuda()
-        img_feats = model.encode_pretransform_image(img_attack_tensor)
+        img_feats = model.encode_posttransform_image(img_attack_tensor)
       
         # re-evaluation
         sims = img_feats @ evaluator.class_text_feats.T                     # (B, NUM_CLASS)
@@ -115,7 +118,7 @@ def main(args):
         result = attacker.run()
         delta = result['best_delta']
         adv_imgs, pil_adv_imgs = evaluator.take_adv_img(delta)            
-        img_feats = model.encode_pretransform_image(adv_imgs)  # (B, D)
+        img_feats = model.encode_posttransform_image(adv_imgs)
         
         sims = img_feats @ evaluator.class_text_feats.T                     # (B, NUM_CLASS)
         adv_preds = sims.argmax(dim=-1).item()                    # (B,)

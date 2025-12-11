@@ -102,3 +102,15 @@ class ViTModel(nn.Module):
         image_features = image_features / image_features.norm(dim=-1, keepdim=True)
         
         return image_features 
+
+    def encode_posttransform_image( 
+        self,
+        images: torch.Tensor
+    ) -> torch.Tensor:
+
+        image_tensors = self.normalize_transform(images)
+        
+        image_features = self.model.encode_image(image_tensors)
+        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+        
+        return image_features 

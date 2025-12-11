@@ -46,7 +46,9 @@ class EvaluatePerturbation:
         perturbations_ = perturbations.clone()
         adv_imgs = self.img_tensor + perturbations_
         adv_imgs = torch.clamp(adv_imgs, 0, 1)
-        adv_feats = self.model.encode_pretransform_image(adv_imgs)  # (B, D)
+        adv_feats = self.model.encode_posttransform_image(adv_imgs)  # (B, D)
+
+        
         sims = adv_feats @ self.class_text_feats.T     # (B, NUM_CLASSES)
         correct_sim = sims[:, self.clean_pred_id].unsqueeze(-1)
 
