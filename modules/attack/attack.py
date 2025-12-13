@@ -135,6 +135,7 @@ class ES_1_Lambda_Gradient(BaseAttack):
         self.sigma = 1.1  # σ tuyệt đối
         self.max_evaluation = max_evaluation
         self.theta = theta  # hệ số điều chỉnh hướng gradient trắng
+        self.device = 'cuda'
 
     def run(self) -> Dict[str, Any]:
         sigma = self.sigma
@@ -172,7 +173,7 @@ class ES_1_Lambda_Gradient(BaseAttack):
             theta = self.theta
 
             # ===== 2. Sample ES population =====
-            noise = torch.randn((self.lam, C, H, W), device=device, generator=g_gpu)
+            noise = torch.randn((self.lam, C, H, W), device=self.device, generator=g_gpu)
 
             X = m \
                 + sigma * noise \
