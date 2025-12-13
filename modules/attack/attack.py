@@ -5,11 +5,7 @@ from .util import clamp_eps, project_delta
 from tqdm import tqdm
 from time import time
 
-
-
-
 class BaseAttack:
-
     def __init__(self, evaluator, eps=8/255, norm="l2", device=None):
         self.evaluator = evaluator
         self.eps = float(eps)
@@ -50,7 +46,7 @@ class ES_1_Lambda(BaseAttack):
         delta_m = project_delta(delta_m, self.eps, self.norm)
 
         f_m, l2_m = self.evaluator.evaluate_blackbox(delta_m)
-        history = [[float(f_m.item()), float(l2_m.item())]]
+        history = [[float(f_m.item()), delta_m.cpu()]]
 
         num_evaluation = 1
         while num_evaluation < self.max_evaluation:
@@ -78,8 +74,7 @@ class ES_1_Lambda(BaseAttack):
                 # sigma = max(1e-6, sigma)     
             
             # print(f"[{num_evaluation} - attack phase] Best loss: ", f_m, " L2: ", l2_m )
-
-            history.append([float(f_m), float(l2_m)])
+            history.append([float(f_m), delta_m.cpu()])
             if self.is_success(f_m):
                 break
             
