@@ -169,7 +169,7 @@ class ES_1_Lambda_Gradient(BaseAttack):
             # normalize gradient (VERY IMPORTANT)
             grad_m = grad_m / (grad_m.norm() + 1e-8)
 
-            theta = theta_base * sigma
+            theta = self.theta
 
             # ===== 2. Sample ES population =====
             noise = torch.randn((self.lam, C, H, W), device=device, generator=g_gpu)
