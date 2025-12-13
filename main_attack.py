@@ -15,7 +15,7 @@ import yaml
 import pandas as pd
 from PIL import Image
 from collections import OrderedDict
-
+import pickle as pkl
 
 _toTensor = transforms.ToTensor()
 
@@ -80,8 +80,8 @@ def main(args):
         save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_lamda={args.lamda}_norm={args.norm}_seed={args.seed}")
     elif args.attacker_name == "PGD":
         save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_steps={args.PGD_steps}_alpha={args.alpha}_norm={args.norm}_seed={args.seed}")
-    # guidded by gradient to be contibnue
-
+    elif args.attacker_name == "ES_1_Lambda_Gradient":
+        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_theta={args.theta}_lamda={args.lamda}_norm={args.norm}_seed={args.seed}")
 
     os.makedirs(save_dir, exist_ok=True)
     
@@ -95,7 +95,7 @@ def main(args):
             max_evaluation=args.max_evaluation,
             lam=args.lamda
         )
-    if args.attacker_name == "PGD":
+    elif args.attacker_name == "PGD":
         attacker = PGDAttack(
             eps=args.epsilon,
             alpha=args.alpha,
@@ -103,6 +103,17 @@ def main(args):
             steps=args.PGD_steps,
             evaluator=evaluator
         )
+
+    elif args.attacker_name == "ES_1_Lambda_Gradient":
+        attacker = ES_1_Lambda_Gradient(
+            evaluator=evaluator,
+            eps=args.epsilon,
+            norm=args.norm,
+            theta=args.theta,
+            max_evaluation=args.max_evaluation,
+            lam=args.lamda
+        )
+    
     
     # ============ size transform ===========
     size_transform = SIZE_TRANSFORM[args.model_name]
@@ -142,6 +153,7 @@ def main(args):
         index_dir = os.path.join(save_dir, str(index))
         os.makedirs(index_dir, exist_ok=True)
         pil_adv_imgs[0].save(os.path.join(index_dir, f'adv_img.png'))
+
         img_attack.save(os.path.join(index_dir, "clean_img.png"))
         
         info = {
@@ -152,6 +164,12 @@ def main(args):
         }
         with open(os.path.join(index_dir, "info.json"), "w") as f:
             json.dump(info, f, indent=4)
+
+        with open(os.path.join(index_dir, "history.pkl"), "wb") as f:
+            pkl.dump(result['history'], f)
+        
+        with open(os.path.join(index_dir, "adv_img.pkl"), "wb") as f:
+            pkl.dump(adv_imgs.cpu(), f)
             
             
         
@@ -179,13 +197,14 @@ def get_args():
     
     # Attack configuration
     parser.add_argument("--attacker_name", type=str, required=True,
-                        choices=[ "ES_1_Lambda", 'PGD'],
+                        choices=[ "ES_1_Lambda", "ES_1_Lambda_Gradient"'PGD'],
                         help="Name of attacker algorithm")
     parser.add_argument("--epsilon", type=float, default=8/255,
                         help="Maximum perturbation magnitude (default: 8/255)")
     parser.add_argument("--norm", type=str, default="linf",
                         choices=["linf", "l2"],
                         help="Norm constraint type")
+    parser.add_argument("--theta", type=float, default=0.001)
     parser.add_argument("--max_evaluation", type=int, default=10000)
     parser.add_argument("--PGD_steps", type=int, default=100)
     parser.add_argument("--alpha", type=float, default=0.01)

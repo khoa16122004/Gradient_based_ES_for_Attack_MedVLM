@@ -4,6 +4,8 @@ from typing import Any, Dict
 from .util import clamp_eps, project_delta
 from tqdm import tqdm
 from time import time
+g_gpu = torch.Generator(device='cuda')
+
 
 class BaseAttack:
     def __init__(self, evaluator, eps=8/255, norm="l2", device=None):
@@ -50,7 +52,8 @@ class ES_1_Lambda(BaseAttack):
 
         num_evaluation = 1
         while num_evaluation < self.max_evaluation:
-            noise = torch.randn((self.lam, C, H, W), device=self.device)
+            # noise = torch.randn((self.lam, C, H, W), device=self.device)
+            noise = torch.randn((self.lam, C, H, W), device=device, generator=g_gpu)
             X = m + sigma * noise
             X_delta = self.z_to_delta(X)
             X_delta = project_delta(X_delta, self.eps, self.norm)
@@ -118,4 +121,88 @@ class PGDAttack(BaseAttack):
             "best_margin": float(final_margin.item()),
             "history": None,
             "num_evaluation": step
+        }
+
+
+class ES_1_Lambda_Gradient(BaseAttack):
+    def __init__(self, evaluator, eps=8/255, norm="linf",
+                 theta=0.001, max_evaluation=10000, lam=64, c_inc=1.5, c_dec=0.9, device='cuda'):
+        super().__init__(evaluator, eps, norm, device)
+        # assert lam >= 2 and c_inc > 1.0 and 0.0 < c_dec < 1.0
+        self.lam = int(lam)
+        self.c_inc = float(c_inc)
+        self.c_dec = float(c_dec)
+        self.sigma = 1.1  # σ tuyệt đối
+        self.max_evaluation = max_evaluation
+        self.theta = theta  # hệ số điều chỉnh hướng gradient trắng
+
+    def run(self) -> Dict[str, Any]:
+        sigma = self.sigma
+        theta = self.theta
+        _, C, H, W = self.evaluator.img_tensor.shape
+
+        m = torch.randn((1, C, H, W), device=self.device)
+
+        delta_m = self.z_to_delta(m)
+        delta_m = project_delta(delta_m, self.eps, self.norm)
+
+        f_m, l2_m = self.evaluator.evaluate_blackbox(delta_m)
+        history = [[float(f_m.item()), delta_m.cpu()]]
+
+        num_evaluation = 1
+
+        while num_evaluation < self.max_evaluation:
+
+            # ===== 1. Compute gradient guidance (WHITEBOX) =====
+            m.requires_grad_(True)
+            delta = self.z_to_delta(m)
+            delta = project_delta(delta, self.eps, self.norm)
+
+            margin_wb, _ = self.evaluator.evaluate_whitebox(delta)
+            loss = margin_wb.mean()
+            loss.backward()
+
+            grad_m = m.grad.detach()
+            print("Gradient sum: ", grad_m.sum())
+            m = m.detach()
+
+            # normalize gradient (VERY IMPORTANT)
+            grad_m = grad_m / (grad_m.norm() + 1e-8)
+
+            theta = theta_base * sigma
+
+            # ===== 2. Sample ES population =====
+            noise = torch.randn((self.lam, C, H, W), device=device, generator=g_gpu)
+
+            X = m \
+                + sigma * noise \
+                - theta * grad_m.unsqueeze(0)
+
+            X_delta = self.z_to_delta(X)
+            X_delta = project_delta(X_delta, self.eps, self.norm)
+
+            margins, l2s = self.evaluate_population(X_delta)
+            num_evaluation += self.lam
+
+            idx_best = torch.argmin(margins).item()
+            f_best = float(margins[idx_best].item())
+
+            if f_best < f_m:
+                m = X[idx_best].clone()
+                delta_m = X_delta[idx_best].clone()
+                f_m = f_best
+                l2_m = float(l2s[idx_best].item())
+                sigma *= self.c_inc
+            else:
+                sigma *= self.c_dec
+
+            history.append([float(f_m), delta_m.cpu()])
+            if self.is_success(f_m):
+                break
+
+        return {
+            "best_delta": delta_m,
+            "best_margin": f_m,
+            "history": history,
+            "num_evaluation": num_evaluation
         }
