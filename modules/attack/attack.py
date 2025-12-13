@@ -160,11 +160,13 @@ class ES_1_Lambda_Gradient(BaseAttack):
             delta = project_delta(delta, self.eps, self.norm)
 
             margin_wb, _ = self.evaluator.evaluate_whitebox(delta)
+            num_evaluation += 1
+
             loss = margin_wb.mean()
             loss.backward()
 
             grad_m = m.grad.detach()
-            print("Gradient sum: ", grad_m.sum())
+            # print("Gradient sum: ", grad_m.sum())
             m = m.detach()
 
             # normalize gradient (VERY IMPORTANT)
@@ -196,6 +198,8 @@ class ES_1_Lambda_Gradient(BaseAttack):
                 sigma *= self.c_inc
             else:
                 sigma *= self.c_dec
+            
+            print(f"[{num_evaluation} - attack phase] Best loss: ", f_m, " L2: ", l2_m )
 
             history.append([float(f_m), delta_m.cpu()])
             if self.is_success(f_m):
