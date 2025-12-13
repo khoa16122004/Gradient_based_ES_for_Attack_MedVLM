@@ -168,8 +168,8 @@ def main(args):
         # with open(os.path.join(index_dir, "history.pkl"), "wb") as f:
         #     pkl.dump(result['history'], f)
         
-        # with open(os.path.join(index_dir, "adv_img.pkl"), "wb") as f:
-        #     pkl.dump(adv_imgs.cpu(), f)
+        with open(os.path.join(index_dir, "adv_img.pkl"), "wb") as f:
+            pkl.dump(adv_imgs.cpu(), f)
             
             
         
