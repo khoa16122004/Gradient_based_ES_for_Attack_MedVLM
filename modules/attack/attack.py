@@ -201,13 +201,13 @@ class ES_1_Lambda_Gradient(BaseAttack):
             
             print(f"[{num_evaluation} - attack phase] Best loss: ", f_m, " L2: ", l2_m )
 
-            history.append([float(f_m), delta_m.cpu()])
+            # history.append([float(f_m), delta_m.cpu()])
             if self.is_success(f_m):
                 break
 
         return {
             "best_delta": delta_m,
             "best_margin": f_m,
-            "history": history,
+            "history": None,
             "num_evaluation": num_evaluation
         }

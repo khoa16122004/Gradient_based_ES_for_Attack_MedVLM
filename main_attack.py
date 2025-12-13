@@ -165,8 +165,8 @@ def main(args):
         with open(os.path.join(index_dir, "info.json"), "w") as f:
             json.dump(info, f, indent=4)
 
-        with open(os.path.join(index_dir, "history.pkl"), "wb") as f:
-            pkl.dump(result['history'], f)
+        # with open(os.path.join(index_dir, "history.pkl"), "wb") as f:
+        #     pkl.dump(result['history'], f)
         
         # with open(os.path.join(index_dir, "adv_img.pkl"), "wb") as f:
         #     pkl.dump(adv_imgs.cpu(), f)
