@@ -177,7 +177,7 @@ class ES_1_Lambda_Gradient(BaseAttack):
 
             X = m \
                 + sigma * noise \
-                - theta * grad_m.unsqueeze(0)
+                - theta * grad_m
 
             X_delta = self.z_to_delta(X)
             X_delta = project_delta(X_delta, self.eps, self.norm)
