@@ -82,6 +82,8 @@ def main(args):
         save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_steps={args.PGD_steps}_alpha={args.alpha}_norm={args.norm}_seed={args.seed}")
     elif args.attacker_name == "ES_1_Lambda_Gradient":
         save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_theta={args.theta}_lamda={args.lamda}_norm={args.norm}_seed={args.seed}")
+    
+
 
     os.makedirs(save_dir, exist_ok=True)
     
@@ -112,6 +114,16 @@ def main(args):
             theta=args.theta,
             max_evaluation=args.max_evaluation,
             lam=args.lamda
+        )
+
+    elif args.attacker_name == "CMA_ES":
+        attacker = CMA_ES(
+            evaluator=evaluator,
+            eps=args.epsilon,
+            norm=args.norm,
+            max_evaluation=args.max_evaluation,
+            lam= args.lamda,
+            mu = args.mu,
         )
     
     
@@ -211,7 +223,7 @@ def get_args():
     parser.add_argument("--lamda", type=int, default=50)
     parser.add_argument("--start_idx", type=int, default=0)
     parser.add_argument("--end_idx", type=int, default=None)
-
+    parser.add_argument("--mu", type=int, default=None)
 
     # Misc
     parser.add_argument("--seed", type=int, default=42,

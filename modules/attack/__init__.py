@@ -9,7 +9,8 @@ for medical image analysis, including MedCLIP and BioMedCLIP.
 from .attack import (
     BaseAttack,
     ES_1_Lambda,    
-    PGDAttack
+    PGDAttack,
+    CMA_ES
 )
 
 # MedCLIP models
