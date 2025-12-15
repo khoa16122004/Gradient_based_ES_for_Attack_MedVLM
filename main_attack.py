@@ -209,7 +209,7 @@ def get_args():
     
     # Attack configuration
     parser.add_argument("--attacker_name", type=str, required=True,
-                        choices=[ "ES_1_Lambda", "ES_1_Lambda_Gradient", 'PGD'],
+                        choices=[ "ES_1_Lambda", "ES_1_Lambda_Gradient", 'PGD', "CMA-ES"],
                         help="Name of attacker algorithm")
     parser.add_argument("--epsilon", type=float, default=8/255,
                         help="Maximum perturbation magnitude (default: 8/255)")
