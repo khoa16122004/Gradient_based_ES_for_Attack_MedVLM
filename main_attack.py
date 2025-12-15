@@ -95,7 +95,7 @@ def main(args):
         eps=args.epsilon,
         norm=args.norm,
         target_image_feat=target_image_feat,
-        target_text_feat=text_feat
+        target_text_feat=target_text_feat
     )
     
     # path dir save
