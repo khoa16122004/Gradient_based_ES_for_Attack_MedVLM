@@ -274,8 +274,9 @@ class CEM_Attack(BaseAttack):
                 ((Z - mu) ** 2).mean()
             ).item()
 
-            sigma = max(sigma, self.sigma_min)
-
+            sigma = torch.sqrt(((Z - mu) ** 2).mean(dim=0))
+            sigma = torch.clamp(sigma, min=self.sigma_min)
+            
             f_mu = margins[elite_idx].mean().item()
             l2_mu = l2s[elite_idx].mean().item()
 
