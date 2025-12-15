@@ -87,64 +87,107 @@ class ES_1_Lambda(BaseAttack):
 
 
 class CMA_ES(BaseAttack):
-    def __init__(self, evaluator, eps=8/255, norm="linf",
-                 max_evaluation=10000, lam=64, mu=None,
-                 sigma=0.5, c_cov=0.2, device="cuda"):
+    def __init__(
+        self,
+        evaluator,
+        eps=8/255,
+        norm="linf",
+        max_evaluation=10000,
+        lam=64,
+        mu=None,
+        sigma=0.5,
+        c_cov=0.2,
+        device=None,
+    ):
         super().__init__(evaluator, eps, norm, device)
 
         self.lam = int(lam)
         self.mu = mu if mu is not None else lam // 2
         self.max_evaluation = max_evaluation
-        self.device = 'cuda'
+
         self.sigma = float(sigma)
         self.c_cov = float(c_cov)
 
-        w = torch.log(torch.tensor(self.mu + 0.5)) - torch.log(torch.arange(1, self.mu + 1))
-        self.weights = (w / w.sum()).to(device)
+        w = torch.log(torch.tensor(self.mu + 0.5)) - torch.log(
+            torch.arange(1, self.mu + 1)
+        )
+        self.weights = (w / w.sum()).to(self.device)
+
+        self.mu_eff = 1.0 / torch.sum(self.weights ** 2)
+
+        self.c_sigma = (self.mu_eff + 2) / (self.mu_eff + 5)
+        self.d_sigma = 1 + 2 * max(
+            0, torch.sqrt((self.mu_eff - 1) / (self.evaluator.img_tensor.numel() + 1)) - 1
+        )
 
     def run(self):
         _, C, H, W = self.evaluator.img_tensor.shape
         device = self.device
-        m = torch.randn((1, C, H, W), device=self.device)
+
+        m = torch.randn((1, C, H, W), device=device)
         C_var = torch.ones_like(m)
+
         delta_m = project_delta(self.z_to_delta(m), self.eps, self.norm)
         f_m, _ = self.evaluator.evaluate_blackbox(delta_m)
 
         history = [[float(f_m.item()), delta_m.cpu()]]
         num_evaluation = 1
 
+        p_sigma = torch.zeros_like(m)
+
         while num_evaluation < self.max_evaluation:
-            noise = torch.randn((self.lam, C, H, W), device=device, generator=g_gpu)
-            X = m + self.sigma * noise * torch.sqrt(C_var)
+
+            noise = torch.randn(
+                (self.lam, C, H, W), device=device, generator=g_gpu
+            )
+
+            Z = noise * torch.sqrt(C_var)
+            X = m + self.sigma * Z
 
             X_delta = project_delta(self.z_to_delta(X), self.eps, self.norm)
-            margins, l2s = self.evaluate_population(X_delta)
+            margins, _ = self.evaluate_population(X_delta)
             num_evaluation += self.lam
 
-            idx = torch.argsort(margins)[:self.mu]
-            X_sel = X[idx]
-            Y = X_sel - m
+            idx = torch.argsort(margins)[: self.mu]
 
-            m = torch.sum(self.weights.view(-1, 1, 1, 1, 1) * X_sel, dim=0)
+            Z_sel = Z[idx]
+            m_old = m.clone()
+
+            m = m + self.sigma * torch.sum(
+                self.weights.view(-1, 1, 1, 1, 1) * Z_sel, dim=0
+            )
+
+            p_sigma = (1 - self.c_sigma) * p_sigma + torch.sqrt(
+                self.c_sigma * (2 - self.c_sigma) * self.mu_eff
+            ) * torch.sum(
+                self.weights.view(-1, 1, 1, 1, 1) * Z_sel, dim=0
+            )
+
+            sigma_norm = p_sigma.norm() / torch.sqrt(
+                torch.tensor(C * H * W, device=device)
+            )
+
+            self.sigma *= torch.exp(
+                (self.c_sigma / self.d_sigma) * (sigma_norm - 1)
+            )
+
             C_var = (1 - self.c_cov) * C_var + self.c_cov * torch.sum(
-                self.weights.view(-1, 1, 1, 1, 1) * (Y ** 2), dim=0,
+                self.weights.view(-1, 1, 1, 1, 1) * (Z_sel ** 2), dim=0
             )
 
             delta_m = project_delta(self.z_to_delta(m), self.eps, self.norm)
-            f_m, l2_m = self.evaluator.evaluate_blackbox(delta_m)
-            num_evaluation += 1
-            print(f"[{num_evaluation} - attack phase] Best loss: ", f_m )
+            f_m = float(margins[idx[0]].item())
 
-            history.append([float(f_m), delta_m.cpu()])
+            history.append([f_m, delta_m.cpu()])
 
             if self.is_success(f_m):
                 break
 
         return {
             "best_delta": delta_m,
-            "best_margin": float(f_m),
-            "history": None,
-            "num_evaluation": num_evaluation
+            "best_margin": f_m,
+            "history": history,
+            "num_evaluation": num_evaluation,
         }
 
 class PGDAttack(BaseAttack):
