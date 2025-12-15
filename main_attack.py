@@ -77,9 +77,15 @@ def main(args):
         target_image = Image.open(args.target_image).convert("RGB")
         target_image_tensor = size_transform(img).convert("RGB")
         target_image_feat = model.encode_posttransform_image(_toTensor(img_attack).unsqueeze(0).cuda())
-    elif args.target_text:
+    else:
+        target_image = None
+    
+    
+    if args.target_text:
         target_text = args.target_text
         text_feat = model.encode_text(item) 
+    else:
+        target_text = None
 
         
 
