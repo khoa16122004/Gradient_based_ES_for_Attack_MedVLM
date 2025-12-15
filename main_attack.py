@@ -78,14 +78,14 @@ def main(args):
         target_image = size_transform(target_image).convert("RGB")
         target_image_feat = model.encode_posttransform_image(_toTensor(target_image).unsqueeze(0).cuda())
     else:
-        target_image = None
+        target_image_feat = None
     
     
     if args.target_text:
         target_text = args.target_text
-        text_feat = model.encode_text([target_text]) 
+        target_text_feat = model.encode_text([target_text]) 
     else:
-        target_text = None
+        target_text_feat = None
 
         
 
@@ -94,8 +94,8 @@ def main(args):
         class_prompts=class_prompts,
         eps=args.epsilon,
         norm=args.norm,
-        target_image_feat=target_image,
-        target_text_feat=target_text
+        target_image_feat=target_image_feat,
+        target_text_feat=text_feat
     )
     
     # path dir save
