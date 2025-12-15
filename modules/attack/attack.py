@@ -95,7 +95,7 @@ class CMA_ES(BaseAttack):
         self.lam = int(lam)
         self.mu = mu if mu is not None else lam // 2
         self.max_evaluation = max_evaluation
-
+        self.device = 'cuda'
         self.sigma = float(sigma)
         self.c_cov = float(c_cov)
 
@@ -104,7 +104,7 @@ class CMA_ES(BaseAttack):
 
     def run(self):
         _, C, H, W = self.evaluator.img_tensor.shape
-
+        device = self.device
         m = torch.randn((1, C, H, W), device=self.device)
         C_var = torch.ones_like(m)
         delta_m = project_delta(self.z_to_delta(m), self.eps, self.norm)
