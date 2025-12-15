@@ -74,9 +74,9 @@ def main(args):
     
     # ========================== Evaluator ==========================
     if args.target_image:
-        target_image = Image.open(args.target_image).convert("RGB")
-        target_image_tensor = size_transform(target_image).convert("RGB")
-        target_image_feat = model.encode_posttransform_image(_toTensor(img_attack).unsqueeze(0).cuda())
+        target_image = Image.open(args.target_image)
+        target_image = size_transform(target_image).convert("RGB")
+        target_image_feat = model.encode_posttransform_image(_toTensor(target_image).unsqueeze(0).cuda())
     else:
         target_image = None
     
