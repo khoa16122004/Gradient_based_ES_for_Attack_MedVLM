@@ -177,6 +177,7 @@ class CMA_ES(BaseAttack):
 
             delta_m = project_delta(self.z_to_delta(m), self.eps, self.norm)
             f_m = float(margins[idx[0]].item())
+            print(f"[{num_evaluation} - attack phase] Best loss: ", f_m)
 
             history.append([f_m, delta_m.cpu()])
 
@@ -186,7 +187,7 @@ class CMA_ES(BaseAttack):
         return {
             "best_delta": delta_m,
             "best_margin": f_m,
-            "history": history,
+            "history": None,
             "num_evaluation": num_evaluation,
         }
 
