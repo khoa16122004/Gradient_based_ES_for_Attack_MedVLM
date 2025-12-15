@@ -282,6 +282,7 @@ class CEM_Attack(BaseAttack):
             if self.is_success(margins[elite_idx[0]].item()):
                 delta_mu = X_delta[elite_idx[0]]
                 break
+            print(f"[{num_evaluation} - attack phase] Best loss: ", f_mu )
 
             delta_mu = self.z_to_delta(mu)
             delta_mu = project_delta(delta_mu, self.eps, self.norm)
