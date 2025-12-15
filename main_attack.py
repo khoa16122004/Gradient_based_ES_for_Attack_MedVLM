@@ -228,8 +228,8 @@ def get_args():
     parser.add_argument("--lamda", type=int, default=50)
     parser.add_argument("--start_idx", type=int, default=0)
     parser.add_argument("--end_idx", type=int, default=None)
-    parser.add_argument("target_image", type=str, default=None, required=False)
-    parser.add_argument("target_text", type=str, default=None, required=False)
+    parser.add_argument("--target_image", type=str, default=None)
+    parser.add_argument("--target_text", type=str, default=None)
 
     # Misc
     parser.add_argument("--seed", type=int, default=42,
