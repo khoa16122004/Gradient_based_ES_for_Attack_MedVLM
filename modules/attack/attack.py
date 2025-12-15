@@ -131,6 +131,8 @@ class CMA_ES(BaseAttack):
             )
 
             delta_m = project_delta(self.z_to_delta(m), self.eps, self.norm)
+            print(delta_m.shape)
+            raise
             f_m, l2_m = self.evaluator.evaluate_blackbox(delta_m)
             num_evaluation += 1
             print(f"[{num_evaluation} - attack phase] Best loss: ", f_m )
