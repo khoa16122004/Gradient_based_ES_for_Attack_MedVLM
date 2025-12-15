@@ -96,7 +96,9 @@ class CMA_ES(BaseAttack):
         lam=64,
         mu=None,
         sigma=0.5,
-        c_cov=0.2,
+        c_cov=0.1,
+        c_inc=1.2,
+        c_dec=0.82,
         device=None,
     ):
         super().__init__(evaluator, eps, norm, device)
@@ -107,21 +109,15 @@ class CMA_ES(BaseAttack):
 
         self.sigma = float(sigma)
         self.c_cov = float(c_cov)
+        self.c_inc = float(c_inc)
+        self.c_dec = float(c_dec)
 
         w = torch.log(torch.tensor(self.mu + 0.5)) - torch.log(
             torch.arange(1, self.mu + 1)
         )
         self.weights = (w / w.sum()).to(self.device)
 
-        self.mu_eff = 1.0 / torch.sum(self.weights ** 2)
-
-        self.c_sigma = (self.mu_eff + 2) / (self.mu_eff + 5)
-
-
     def run(self):
-        d_sigma = 1 + 2 * max(
-            0, torch.sqrt((self.mu_eff - 1) / (self.evaluator.img_tensor.numel() + 1)) - 1
-        )
         _, C, H, W = self.evaluator.img_tensor.shape
         device = self.device
 
@@ -131,10 +127,7 @@ class CMA_ES(BaseAttack):
         delta_m = project_delta(self.z_to_delta(m), self.eps, self.norm)
         f_m, _ = self.evaluator.evaluate_blackbox(delta_m)
 
-        history = [[float(f_m.item())]]
         num_evaluation = 1
-
-        p_sigma = torch.zeros_like(m)
 
         while num_evaluation < self.max_evaluation:
 
@@ -142,7 +135,10 @@ class CMA_ES(BaseAttack):
                 (self.lam, C, H, W), device=device, generator=g_gpu
             )
 
-            Z = noise * torch.sqrt(C_var)
+            # ---- sampling (safe) ----
+            Z = noise * torch.sqrt(torch.clamp(C_var, min=1e-8))
+            Z = torch.clamp(Z, -3.0, 3.0)
+
             X = m + self.sigma * Z
 
             X_delta = project_delta(self.z_to_delta(X), self.eps, self.norm)
@@ -152,35 +148,37 @@ class CMA_ES(BaseAttack):
             idx = torch.argsort(margins)[: self.mu]
 
             Z_sel = Z[idx]
-            m_old = m.clone()
 
-            m = m + self.sigma * torch.sum(
+            m_new = m + self.sigma * torch.sum(
                 self.weights.view(-1, 1, 1, 1, 1) * Z_sel, dim=0
             )
 
-            p_sigma = (1 - self.c_sigma) * p_sigma + torch.sqrt(
-                self.c_sigma * (2 - self.c_sigma) * self.mu_eff
-            ) * torch.sum(
-                self.weights.view(-1, 1, 1, 1, 1) * Z_sel, dim=0
-            )
+            f_best = float(margins[idx[0]].item())
 
-            sigma_norm = p_sigma.norm() / torch.sqrt(
-                torch.tensor(C * H * W, device=device)
-            )
+            # ---- success-based sigma ----
+            if f_best < f_m:
+                m = m_new
+                f_m = f_best
+                self.sigma *= self.c_inc
+            else:
+                self.sigma *= self.c_dec
 
-            self.sigma *= torch.exp(
-                (self.c_sigma / d_sigma) * (sigma_norm - 1)
-            )
+            # ---- clamp sigma ----
+            self.sigma = float(torch.clamp(
+                torch.tensor(self.sigma, device=device),
+                1e-4, 2.0
+            ))
 
+            # ---- covariance update (safe) ----
             C_var = (1 - self.c_cov) * C_var + self.c_cov * torch.sum(
-                self.weights.view(-1, 1, 1, 1, 1) * (Z_sel ** 2), dim=0
+                self.weights.view(-1, 1, 1, 1, 1) * (Z_sel ** 2),
+                dim=0
             )
+            C_var = torch.clamp(C_var, min=1e-8, max=10.0)
 
             delta_m = project_delta(self.z_to_delta(m), self.eps, self.norm)
-            f_m = float(margins[idx[0]].item())
-            print(f"[{num_evaluation} - attack phase] Best loss: ", f_m)
 
-            history.append([f_m])
+            print(f"[{num_evaluation}] Best loss: {f_m:.6f}, sigma: {self.sigma:.4f}")
 
             if self.is_success(f_m):
                 break
