@@ -125,14 +125,12 @@ class CMA_ES(BaseAttack):
             X_sel = X[idx]
             Y = X_sel - m
 
-            m = torch.sum(self.weights.view(-1, 1, 1, 1, 1) * X_sel, dim=0, keepdim=True)
+            m = torch.sum(self.weights.view(-1, 1, 1, 1, 1) * X_sel, dim=0)
             C_var = (1 - self.c_cov) * C_var + self.c_cov * torch.sum(
-                self.weights.view(-1, 1, 1, 1, 1) * (Y ** 2), dim=0, keepdim=True
+                self.weights.view(-1, 1, 1, 1, 1) * (Y ** 2), dim=0,
             )
 
             delta_m = project_delta(self.z_to_delta(m), self.eps, self.norm)
-            print(delta_m.shape)
-            raise
             f_m, l2_m = self.evaluator.evaluate_blackbox(delta_m)
             num_evaluation += 1
             print(f"[{num_evaluation} - attack phase] Best loss: ", f_m )
