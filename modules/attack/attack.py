@@ -131,7 +131,7 @@ class CMA_ES(BaseAttack):
         delta_m = project_delta(self.z_to_delta(m), self.eps, self.norm)
         f_m, _ = self.evaluator.evaluate_blackbox(delta_m)
 
-        history = [[float(f_m.item()), delta_m.cpu()]]
+        history = [[float(f_m.item())]]
         num_evaluation = 1
 
         p_sigma = torch.zeros_like(m)
@@ -180,7 +180,7 @@ class CMA_ES(BaseAttack):
             f_m = float(margins[idx[0]].item())
             print(f"[{num_evaluation} - attack phase] Best loss: ", f_m)
 
-            history.append([f_m, delta_m.cpu()])
+            history.append([f_m])
 
             if self.is_success(f_m):
                 break
