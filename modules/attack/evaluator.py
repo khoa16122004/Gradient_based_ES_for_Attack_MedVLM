@@ -12,12 +12,16 @@ class EvaluatePerturbation:
         model: nn.Module,
         class_prompts: List[str], # (NUM_CLASSES x D)
         eps: float=0.03,
-        norm: str='linf'
+        norm: str='linf',
+        target_image_feat: str = None,
+        target_text_feat: str = None,
     ):
         self.model = model
         self.class_text_feats = self.extract_centroid_vector(class_prompts)
         self.eps = eps
         self.norm = norm
+        self.target_image_feat = target_image_feat
+        self.target_text_feat = target_text_feat
         
     def set_data(self, image, clean_pred_id):
         self.img = image
@@ -57,6 +61,15 @@ class EvaluatePerturbation:
         mask[:, self.clean_pred_id] = False
         other_max_sim = sims[mask].view(sims.size(0), -1).max(dim=1, keepdim=True).values  # (B, 1)
         margin = correct_sim - other_max_sim
+
+        if self.target_image_feat:
+            target_sim = adv_feats @ self.target_image_feat.T
+            margin = margin - target_sim
+
+        elif self.target_text_feat:
+            target_sim = adv_feats @ self.target_text_feat.T
+            margin = margin - target_sim
+
         # margin = correct_sim - other_max_sim + 0.05
 
         l2 = self.cal_l2(perturbations_)

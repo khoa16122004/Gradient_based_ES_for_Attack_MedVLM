@@ -28,6 +28,12 @@ def main(args):
         transform=None
     )
 
+
+    # ============ size transform ===========
+    size_transform = SIZE_TRANSFORM[args.model_name]
+
+
+
    # ========= class_prompt_based ========= #
     class_prompts = RSNA_CLASS_PROMPTS
     num_classes = len(class_prompts)
@@ -67,11 +73,23 @@ def main(args):
     
     
     # ========================== Evaluator ==========================
+    if args.target_image:
+        target_image = Image.open(args.target_image).convert("RGB")
+        target_image_tensor = size_transform(img).convert("RGB")
+        target_image_feat = model.encode_posttransform_image(_toTensor(img_attack).unsqueeze(0).cuda())
+    elif args.target_text:
+        target_text = args.target_text
+        text_feat = model.encode_text(item) 
+
+        
+
     evaluator = EvaluatePerturbation(
         model=model,
         class_prompts=class_prompts,
         eps=args.epsilon,
-        norm=args.norm
+        norm=args.norm,
+        target_image_feat=target_image,
+        target_text_feat=target_text
     )
     
     # path dir save
@@ -115,8 +133,7 @@ def main(args):
         )
     
     
-    # ============ size transform ===========
-    size_transform = SIZE_TRANSFORM[args.model_name]
+
 
 
     # --------------------------- Main LOOP ------------------ 
@@ -211,7 +228,8 @@ def get_args():
     parser.add_argument("--lamda", type=int, default=50)
     parser.add_argument("--start_idx", type=int, default=0)
     parser.add_argument("--end_idx", type=int, default=None)
-
+    parser.add_argument("target_image", type=str, default=None)
+    parser.add_argument("target_text", type=str, default=None)
 
     # Misc
     parser.add_argument("--seed", type=int, default=42,
