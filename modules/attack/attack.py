@@ -85,111 +85,6 @@ class ES_1_Lambda(BaseAttack):
         return {"best_delta": delta_m, "best_margin": f_m, "history": history, "num_evaluation": num_evaluation}
 
 
-
-class CMA_ES(BaseAttack):
-    def __init__(
-        self,
-        evaluator,
-        eps=8/255,
-        norm="linf",
-        max_evaluation=10000,
-        lam=64,
-        mu=None,
-        sigma=0.5,
-        c_cov=0.1,
-        c_inc=1.2,
-        c_dec=0.82,
-        device=None,
-    ):
-        super().__init__(evaluator, eps, norm, device)
-
-        self.lam = int(lam)
-        self.mu = mu if mu is not None else lam // 2
-        self.max_evaluation = max_evaluation
-
-        self.sigma = float(sigma)
-        self.c_cov = float(c_cov)
-        self.c_inc = float(c_inc)
-        self.c_dec = float(c_dec)
-
-        w = torch.log(torch.tensor(self.mu + 0.5)) - torch.log(
-            torch.arange(1, self.mu + 1)
-        )
-        self.weights = (w / w.sum()).to(self.device)
-
-    def run(self):
-        _, C, H, W = self.evaluator.img_tensor.shape
-        device = self.device
-
-        m = torch.randn((1, C, H, W), device=device)
-        C_var = torch.ones_like(m)
-
-        delta_m = project_delta(self.z_to_delta(m), self.eps, self.norm)
-        f_m, _ = self.evaluator.evaluate_blackbox(delta_m)
-
-        num_evaluation = 1
-
-        while num_evaluation < self.max_evaluation:
-
-            noise = torch.randn(
-                (self.lam, C, H, W), device=device, generator=g_gpu
-            )
-
-            # ---- sampling (safe) ----
-            Z = noise * torch.sqrt(torch.clamp(C_var, min=1e-8))
-            Z = torch.clamp(Z, -3.0, 3.0)
-
-            X = m + self.sigma * Z
-
-            X_delta = project_delta(self.z_to_delta(X), self.eps, self.norm)
-            margins, _ = self.evaluate_population(X_delta)
-            num_evaluation += self.lam
-
-            idx = torch.argsort(margins)[: self.mu]
-
-            Z_sel = Z[idx]
-
-            m_new = m + self.sigma * torch.sum(
-                self.weights.view(-1, 1, 1, 1, 1) * Z_sel, dim=0
-            )
-
-            f_best = float(margins[idx[0]].item())
-
-            # ---- success-based sigma ----
-            if f_best < f_m:
-                m = m_new
-                f_m = f_best
-                self.sigma *= self.c_inc
-            else:
-                self.sigma *= self.c_dec
-
-            # ---- clamp sigma ----
-            self.sigma = float(torch.clamp(
-                torch.tensor(self.sigma, device=device),
-                1e-4, 2.0
-            ))
-
-            # ---- covariance update (safe) ----
-            C_var = (1 - self.c_cov) * C_var + self.c_cov * torch.sum(
-                self.weights.view(-1, 1, 1, 1, 1) * (Z_sel ** 2),
-                dim=0
-            )
-            C_var = torch.clamp(C_var, min=1e-8, max=10.0)
-
-            delta_m = project_delta(self.z_to_delta(m), self.eps, self.norm)
-
-            print(f"[{num_evaluation}] Best loss: {f_m.item():.6f} ")
-
-            if self.is_success(f_m):
-                break
-
-        return {
-            "best_delta": delta_m,
-            "best_margin": f_m,
-            "history": None,
-            "num_evaluation": num_evaluation,
-        }
-
 class PGDAttack(BaseAttack):
     def __init__(self, eps, alpha, norm, steps, evaluator):
         self.eps = eps
@@ -279,6 +174,7 @@ class ES_1_Lambda_Gradient(BaseAttack):
 
             theta = self.theta
 
+            # ===== 2. Sample ES population =====
             noise = torch.randn((self.lam, C, H, W), device=self.device, generator=g_gpu)
 
             X = m \

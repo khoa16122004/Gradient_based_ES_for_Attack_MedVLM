@@ -5,7 +5,7 @@ from tqdm import tqdm
 import numpy as np
 import torch
 import json
-from modules.attack.attack import ES_1_Lambda, PGDAttack, ES_1_Lambda_Gradient, CMA_ES
+from modules.attack.attack import ES_1_Lambda, PGDAttack, ES_1_Lambda_Gradient
 from modules.attack.evaluator import EvaluatePerturbation
 from modules.attack.util import seed_everything 
 from modules.utils.helpers import _extract_label, load_open_clip_model
@@ -82,10 +82,6 @@ def main(args):
         save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_steps={args.PGD_steps}_alpha={args.alpha}_norm={args.norm}_seed={args.seed}")
     elif args.attacker_name == "ES_1_Lambda_Gradient":
         save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_theta={args.theta}_lamda={args.lamda}_norm={args.norm}_seed={args.seed}")
-    elif args.attacker_name == "CMA_ES":
-        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_mu={args.mu}_lamda={args.lamda}_norm={args.norm}_seed={args.seed}")
-    
-
 
     os.makedirs(save_dir, exist_ok=True)
     
@@ -116,16 +112,6 @@ def main(args):
             theta=args.theta,
             max_evaluation=args.max_evaluation,
             lam=args.lamda
-        )
-
-    elif args.attacker_name == "CMA_ES":
-        attacker = CMA_ES(
-            evaluator=evaluator,
-            eps=args.epsilon,
-            norm=args.norm,
-            max_evaluation=args.max_evaluation,
-            lam= args.lamda,
-            mu = args.mu,
         )
     
     
@@ -211,7 +197,7 @@ def get_args():
     
     # Attack configuration
     parser.add_argument("--attacker_name", type=str, required=True,
-                        choices=[ "ES_1_Lambda", "ES_1_Lambda_Gradient", 'PGD', "CMA_ES"],
+                        choices=[ "ES_1_Lambda", "ES_1_Lambda_Gradient", 'PGD'],
                         help="Name of attacker algorithm")
     parser.add_argument("--epsilon", type=float, default=8/255,
                         help="Maximum perturbation magnitude (default: 8/255)")
@@ -225,7 +211,7 @@ def get_args():
     parser.add_argument("--lamda", type=int, default=50)
     parser.add_argument("--start_idx", type=int, default=0)
     parser.add_argument("--end_idx", type=int, default=None)
-    parser.add_argument("--mu", type=int, default=None)
+
 
     # Misc
     parser.add_argument("--seed", type=int, default=42,
