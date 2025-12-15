@@ -75,7 +75,7 @@ def main(args):
     # ========================== Evaluator ==========================
     if args.target_image:
         target_image = Image.open(args.target_image).convert("RGB")
-        target_image_tensor = size_transform(img).convert("RGB")
+        target_image_tensor = size_transform(target_image).convert("RGB")
         target_image_feat = model.encode_posttransform_image(_toTensor(img_attack).unsqueeze(0).cuda())
     else:
         target_image = None
@@ -83,7 +83,7 @@ def main(args):
     
     if args.target_text:
         target_text = args.target_text
-        text_feat = model.encode_text(item) 
+        text_feat = model.encode_text([target_text]) 
     else:
         target_text = None
 
