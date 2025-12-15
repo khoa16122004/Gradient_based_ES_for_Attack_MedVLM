@@ -12,7 +12,7 @@ class BaseAttack:
         self.evaluator = evaluator
         self.eps = float(eps)
         self.norm = norm
-        self.device = 'cuda'
+        self.device = device if device is not None else next(self.evaluator.model.parameters()).device
 
     def evaluate_population(self, deltas: torch.Tensor) -> np.ndarray:
         with torch.no_grad():
@@ -53,7 +53,7 @@ class ES_1_Lambda(BaseAttack):
         num_evaluation = 1
         while num_evaluation < self.max_evaluation:
             # noise = torch.randn((self.lam, C, H, W), device=self.device)
-            noise = torch.randn((self.lam, C, H, W), 'cuda', generator=g_gpu)
+            noise = torch.randn((self.lam, C, H, W), device=self.device, generator=g_gpu)
             X = m + sigma * noise
             X_delta = self.z_to_delta(X)
             X_delta = project_delta(X_delta, self.eps, self.norm)
