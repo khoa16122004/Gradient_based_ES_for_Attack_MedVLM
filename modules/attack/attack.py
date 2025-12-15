@@ -178,7 +178,7 @@ class CMA_ES(BaseAttack):
 
             delta_m = project_delta(self.z_to_delta(m), self.eps, self.norm)
 
-            print(f"[{num_evaluation}] Best loss: {f_m:.6f}, sigma: {self.sigma:.4f}")
+            print(f"[{num_evaluation}] Best loss: {f_m:.6f} ")
 
             if self.is_success(f_m):
                 break
