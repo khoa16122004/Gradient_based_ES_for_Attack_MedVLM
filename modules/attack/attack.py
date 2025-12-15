@@ -268,7 +268,7 @@ class CEM_Attack(BaseAttack):
 
             Z = X[elite_idx]
 
-            mu = Z.mean(dim=0, keepdim=True)
+            mu = Z.mean(dim=0)
 
             sigma = torch.sqrt(
                 ((Z - mu) ** 2).mean()
