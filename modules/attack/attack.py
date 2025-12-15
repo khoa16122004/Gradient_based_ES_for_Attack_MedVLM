@@ -116,9 +116,7 @@ class CMA_ES(BaseAttack):
         self.mu_eff = 1.0 / torch.sum(self.weights ** 2)
 
         self.c_sigma = (self.mu_eff + 2) / (self.mu_eff + 5)
-        d_sigma = 1 + 2 * max(
-            0, torch.sqrt((self.mu_eff - 1) / (self.evaluator.img_tensor.numel() + 1)) - 1
-        )
+
 
     def run(self):
         d_sigma = 1 + 2 * max(
