@@ -145,8 +145,8 @@ def main(args):
             eps=args.epsilon,
             norm=args.norm,
             max_evaluation=args.max_evaluation,
-            lam=args.lamda,
-            mu=args.mu
+            N=args.lamda,
+            Ne=args.mu
         )
     
     
