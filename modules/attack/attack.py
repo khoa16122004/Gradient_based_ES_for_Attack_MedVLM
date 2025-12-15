@@ -154,6 +154,7 @@ class ES_1_Lambda_Gradient(BaseAttack):
         history = [[float(f_m.item()), delta_m.cpu()]]
 
         num_evaluation = 1
+        theta = self.theta
 
         while num_evaluation < self.max_evaluation:
 
@@ -165,21 +166,16 @@ class ES_1_Lambda_Gradient(BaseAttack):
             margin_wb, _ = self.evaluator.evaluate_whitebox(delta)
             num_evaluation += 1
 
+            # calculate gradient
             loss = margin_wb.mean()
             loss.backward()
-
             grad_m = m.grad.detach()
-            # print("Gradient sum: ", grad_m.sum())
             m = m.detach()
-
-            # normalize gradient (VERY IMPORTANT)
             grad_m = grad_m / (grad_m.norm() + 1e-8)
+            m = m - theta * grad_m # gradient guided
 
-            theta = self.theta
-            m = m - theta * grad_m
-            # ===== 2. Sample ES population =====
+
             noise = torch.randn((self.lam, C, H, W), device=self.device, generator=g_gpu)
-
             X = m + sigma * noise
 
             X_delta = self.z_to_delta(X)
@@ -210,5 +206,88 @@ class ES_1_Lambda_Gradient(BaseAttack):
             "best_delta": delta_m,
             "best_margin": f_m,
             "history": None,
+            "num_evaluation": num_evaluation
+        }
+
+
+class CEM_Attack(BaseAttack):
+    def __init__(
+        self,
+        evaluator,
+        eps=8/255,
+        norm="linf",
+        max_evaluation=10000,
+        N=64,          # number of samples
+        Ne=8,          # elite set size
+        sigma_init=1.1,
+        sigma_min=1e-3,
+        device="cuda"
+    ):
+        super().__init__(evaluator, eps, norm, device)
+
+        self.N = int(N)
+        self.Ne = int(Ne)
+        self.sigma_init = float(sigma_init)
+        self.sigma_min = sigma_min
+        self.max_evaluation = max_evaluation
+        self.device = device
+
+        assert self.Ne < self.N
+
+    def run(self):
+
+        _, C, H, W = self.evaluator.img_tensor.shape
+
+        mu = torch.randn((1, C, H, W), device=self.device)
+        sigma = self.sigma_init
+
+        delta_mu = self.z_to_delta(mu)
+        delta_mu = project_delta(delta_mu, self.eps, self.norm)
+
+        f_mu, l2_mu = self.evaluator.evaluate_blackbox(delta_mu)
+        num_evaluation = 1
+
+        while num_evaluation < self.max_evaluation:
+
+            noise = torch.randn(
+                (self.N, C, H, W),
+                device=self.device,
+                generator=g_gpu
+            )
+
+            X = mu + sigma * noise
+
+            X_delta = self.z_to_delta(X)
+            X_delta = project_delta(X_delta, self.eps, self.norm)
+
+            margins, l2s = self.evaluate_population(X_delta)
+            num_evaluation += self.N
+
+            idx_sorted = torch.argsort(margins)
+            elite_idx = idx_sorted[:self.Ne]
+
+            Z = X[elite_idx]
+
+            mu = Z.mean(dim=0, keepdim=True)
+
+            sigma = torch.sqrt(
+                ((Z - mu) ** 2).mean()
+            ).item()
+
+            sigma = max(sigma, self.sigma_min)
+
+            f_mu = margins[elite_idx].mean().item()
+            l2_mu = l2s[elite_idx].mean().item()
+
+            if self.is_success(margins[elite_idx[0]].item()):
+                delta_mu = X_delta[elite_idx[0]]
+                break
+
+            delta_mu = self.z_to_delta(mu)
+            delta_mu = project_delta(delta_mu, self.eps, self.norm)
+
+        return {
+            "best_delta": delta_mu,
+            "best_margin": f_mu,
             "num_evaluation": num_evaluation
         }
