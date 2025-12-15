@@ -243,6 +243,7 @@ def get_args():
     parser.add_argument("--PGD_steps", type=int, default=100)
     parser.add_argument("--alpha", type=float, default=0.01)
     parser.add_argument("--lamda", type=int, default=50)
+    parser.add_argument("--mu", type=float, default=8)
     parser.add_argument("--start_idx", type=int, default=0)
     parser.add_argument("--end_idx", type=int, default=None)
     parser.add_argument("--target_image", type=str, default=None)
