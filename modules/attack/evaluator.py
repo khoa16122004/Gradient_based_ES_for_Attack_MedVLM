@@ -62,11 +62,11 @@ class EvaluatePerturbation:
         other_max_sim = sims[mask].view(sims.size(0), -1).max(dim=1, keepdim=True).values  # (B, 1)
         margin = correct_sim - other_max_sim
 
-        if self.target_image_feat:
+        if self.target_image_feat is not None:
             target_sim = adv_feats @ self.target_image_feat.T
             margin = margin - target_sim
 
-        elif self.target_text_feat:
+        elif self.target_text_feat is not None:
             target_sim = adv_feats @ self.target_text_feat.T
             margin = margin - target_sim
 
