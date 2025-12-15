@@ -85,6 +85,9 @@ class ES_1_Lambda(BaseAttack):
         return {"best_delta": delta_m, "best_margin": f_m, "history": history, "num_evaluation": num_evaluation}
 
 
+
+
+
 class PGDAttack(BaseAttack):
     def __init__(self, eps, alpha, norm, steps, evaluator):
         self.eps = eps
@@ -173,13 +176,11 @@ class ES_1_Lambda_Gradient(BaseAttack):
             grad_m = grad_m / (grad_m.norm() + 1e-8)
 
             theta = self.theta
-
+            m = m - theta * grad_m
             # ===== 2. Sample ES population =====
             noise = torch.randn((self.lam, C, H, W), device=self.device, generator=g_gpu)
 
-            X = m \
-                + sigma * noise \
-                - theta * grad_m
+            X = m + sigma * noise
 
             X_delta = self.z_to_delta(X)
             X_delta = project_delta(X_delta, self.eps, self.norm)
