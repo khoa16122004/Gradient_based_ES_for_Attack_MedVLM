@@ -371,7 +371,6 @@ class ESGD_Attack(BaseAttack):
                 population[i] = self.sgd_refine(population[i])
 
             deltas = self.z_to_delta(population)
-            print(deltas.shape)
             deltas = project_delta(deltas, self.eps, self.norm)
             margins, _ = self.evaluate_population(deltas)
             num_eval += self.mu
@@ -392,7 +391,7 @@ class ESGD_Attack(BaseAttack):
                 )
 
                 parents = population[torch.randint(0, self.mu, (self.lam,))]
-                offspring = parents + self.sigma * noise
+                offspring = parents - self.sigma * noise
 
                 all_pop = torch.cat([population, offspring], dim=0)
                 all_delta = self.z_to_delta(all_pop)
