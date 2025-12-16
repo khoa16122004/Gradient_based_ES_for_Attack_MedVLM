@@ -157,7 +157,7 @@ def main(args):
             norm=args.norm,
             max_evaluation=args.max_evaluation,
             lam=args.lamda,
-            mu=argmax
+            mu=args.mu
         )
     
     
