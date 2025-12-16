@@ -413,7 +413,7 @@ class ESGD_Attack(BaseAttack):
                     ]
                 ]
 
-                population = torch.cat([elites, rest], dim=0).squeeze(1)
+                population = torch.stack([elites, rest], dim=0)
 
             print(
                 f"[Eval {num_eval}] "
