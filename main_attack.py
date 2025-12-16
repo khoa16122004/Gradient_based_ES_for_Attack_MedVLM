@@ -108,7 +108,8 @@ def main(args):
         save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_theta={args.theta}_lamda={args.lamda}_norm={args.norm}_seed={args.seed}")
     elif args.attacker_name == "CEM":
         save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_lamda={args.lamda}_mu={args.mu}_norm={args.norm}_seed={args.seed}")
-
+    elif args.attacker_name == "ESGD":
+        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_lamda={args.lamda}_mu={args.mu}_norm={args.norm}_seed={args.seed}")
     os.makedirs(save_dir, exist_ok=True)
     
     
