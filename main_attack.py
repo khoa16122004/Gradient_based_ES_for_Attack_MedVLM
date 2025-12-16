@@ -5,7 +5,7 @@ from tqdm import tqdm
 import numpy as np
 import torch
 import json
-from modules.attack.attack import ES_1_Lambda, PGDAttack, ES_1_Lambda_Gradient, CEM_Attack
+from modules.attack.attack import ES_1_Lambda, PGDAttack, ES_1_Lambda_Gradient, CEM_Attack, ESGD_Attack
 from modules.attack.evaluator import EvaluatePerturbation
 from modules.attack.util import seed_everything 
 from modules.utils.helpers import _extract_label, load_open_clip_model
