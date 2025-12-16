@@ -37,7 +37,7 @@ __all__ = [
     ES_1_Lambda,    # ESAttack,
     PGDAttack,
     EvaluatePerturbation,
-    ESGD_Attack
+    ESGD_Attack,
     clamp_eps,
     project_delta,
 
