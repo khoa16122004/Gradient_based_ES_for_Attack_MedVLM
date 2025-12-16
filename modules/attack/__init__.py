@@ -11,6 +11,7 @@ from .attack import (
     ES_1_Lambda,    
     PGDAttack,
     CEM_Attack,
+    ESGD_Attack,
 )
 
 # MedCLIP models
@@ -36,7 +37,7 @@ __all__ = [
     ES_1_Lambda,    # ESAttack,
     PGDAttack,
     EvaluatePerturbation,
-    
+    ESGD_Attack
     clamp_eps,
     project_delta,
 

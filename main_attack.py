@@ -148,6 +148,16 @@ def main(args):
             N=args.lamda,
             Ne=args.mu
         )
+
+    elif args.attacker_name == "ESGD":
+        attacker = ESGD_Attack(
+            evaluator=evaluator,
+            eps=args.epsilon,
+            norm=args.norm,
+            max_evaluation=args.max_evaluation,
+            lam=args.lamda,
+            mu=argmax
+        )
     
     
 
@@ -231,7 +241,7 @@ def get_args():
     
     # Attack configuration
     parser.add_argument("--attacker_name", type=str, required=True,
-                        choices=[ "ES_1_Lambda", "ES_1_Lambda_Gradient", 'PGD', "CEM"],
+                        choices=[ "ES_1_Lambda", "ES_1_Lambda_Gradient", 'PGD', "CEM", "ESGD"],
                         help="Name of attacker algorithm")
     parser.add_argument("--epsilon", type=float, default=8/255,
                         help="Maximum perturbation magnitude (default: 8/255)")

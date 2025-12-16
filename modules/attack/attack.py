@@ -158,7 +158,6 @@ class ES_1_Lambda_Gradient(BaseAttack):
 
         while num_evaluation < self.max_evaluation:
 
-            # ===== 1. Compute gradient guidance (WHITEBOX) =====
             m.requires_grad_(True)
             delta = self.z_to_delta(m)
             delta = project_delta(delta, self.eps, self.norm)
@@ -292,4 +291,129 @@ class CEM_Attack(BaseAttack):
             "best_delta": delta_mu,
             "best_margin": f_mu,
             "num_evaluation": num_evaluation
+        }
+
+
+class ESGD_Attack(BaseAttack):
+    def __init__(
+        self,
+        evaluator,
+        eps=8/255,
+        norm="linf",
+        mu=4,
+        lam=16,
+        m=2,
+        Ks=5,
+        Kv=1,
+        alpha=0.01,
+        sigma=0.5,
+        max_evaluation=10000,
+        device="cuda"
+    ):
+        super().__init__(evaluator, eps, norm, device)
+        self.mu = mu
+        self.lam = lam
+        self.m = m
+        self.Ks = Ks
+        self.Kv = Kv
+        self.alpha = alpha
+        self.sigma = sigma
+        self.max_evaluation = max_evaluation
+
+    def sgd_refine(self, z):
+        z = z.clone().detach().requires_grad_(True)
+        best_z = z.detach().clone()
+
+        delta = self.z_to_delta(z)
+        delta = project_delta(delta, self.eps, self.norm)
+        best_f, _ = self.evaluator.evaluate_whitebox(delta)
+
+        for _ in range(self.Ks):
+            delta = self.z_to_delta(z)
+            delta = project_delta(delta, self.eps, self.norm)
+            margin, _ = self.evaluator.evaluate_whitebox(delta)
+            loss = margin.mean()
+            loss.backward()
+
+            with torch.no_grad():
+                z -= self.alpha * z.grad
+                z.grad.zero_()
+
+            delta_new = self.z_to_delta(z)
+            delta_new = project_delta(delta_new, self.eps, self.norm)
+            f_new, _ = self.evaluator.evaluate_whitebox(delta_new)
+
+            if f_new < best_f:
+                best_f = f_new
+                best_z = z.detach().clone()
+            else:
+                z = best_z.clone().detach().requires_grad_(True)
+
+        return best_z.detach()
+
+    def run(self):
+
+        _, C, H, W = self.evaluator.img_tensor.shape
+
+        population = torch.randn(
+            (self.mu, C, H, W),
+            device=self.device,
+            generator=g_gpu
+        )
+
+        num_eval = 0
+        best_margin = float("inf")
+        best_delta = None
+
+        while num_eval < self.max_evaluation:
+
+            for i in range(self.mu):
+                population[i] = self.sgd_refine(population[i])
+
+            deltas = self.z_to_delta(population)
+            deltas = project_delta(deltas, self.eps, self.norm)
+            margins, _ = self.evaluate_population(deltas)
+            num_eval += self.mu
+
+            idx_best = torch.argmin(margins)
+            if margins[idx_best] < best_margin:
+                best_margin = float(margins[idx_best].item())
+                best_delta = deltas[idx_best].clone()
+
+            if self.is_success(best_margin):
+                break
+
+            for _ in range(self.Kv):
+                noise = torch.randn(
+                    (self.lam, C, H, W),
+                    device=self.device,
+                    generator=g_gpu
+                )
+
+                parents = population[torch.randint(0, self.mu, (self.lam,))]
+                offspring = parents + self.sigma * noise
+
+                all_pop = torch.cat([population, offspring], dim=0)
+                all_delta = self.z_to_delta(all_pop)
+                all_delta = project_delta(all_delta, self.eps, self.norm)
+
+                margins, _ = self.evaluate_population(all_delta)
+                num_eval += all_pop.size(0)
+
+                idx = torch.argsort(margins)
+                elites = all_pop[idx[:self.m]]
+                rest_idx = idx[self.m:]
+                rest = all_pop[rest_idx[torch.randperm(len(rest_idx))[:self.mu - self.m]]]
+
+                population = torch.cat([elites, rest], dim=0)
+
+            print(
+                   f"[Eval {num_eval}] "
+                    f"Best margin: {best_margin:.6f}"
+            )
+
+        return {
+            "best_delta": best_delta,
+            "best_margin": best_margin,
+            "num_evaluation": num_eval
         }
