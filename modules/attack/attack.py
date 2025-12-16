@@ -357,7 +357,7 @@ class ESGD_Attack(BaseAttack):
 
         population = torch.randn(
             (self.mu, C, H, W),
-            device=self.device,
+device=torch.device(self.device),
             generator=g_gpu
         )
 
@@ -386,7 +386,7 @@ class ESGD_Attack(BaseAttack):
             for _ in range(self.Kv):
                 noise = torch.randn(
                     (self.lam, C, H, W),
-                    device=self.device,
+                    device=torch.device(self.device),
                     generator=g_gpu
                 )
 
