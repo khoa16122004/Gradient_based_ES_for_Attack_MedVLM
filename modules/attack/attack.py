@@ -368,7 +368,7 @@ class ESGD_Attack(BaseAttack):
         while num_eval < self.max_evaluation:
 
             for i in range(self.mu):
-                population[i] = self.sgd_refine(population[i])
+                population[i] = self.sgd_refine(population[i]).squeeze(0)
 
             deltas = self.z_to_delta(population)
             print(deltas.shape)
