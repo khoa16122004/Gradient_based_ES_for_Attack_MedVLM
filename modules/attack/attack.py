@@ -368,7 +368,7 @@ class ESGD_Attack(BaseAttack):
         while num_eval < self.max_evaluation:
 
             for i in range(self.mu):
-                population[i] = self.sgd_refine(population[i]).squeeze(0)
+                population[i] = self.sgd_refine(population[i])
 
             deltas = self.z_to_delta(population)
             print(deltas.shape)
@@ -406,7 +406,7 @@ class ESGD_Attack(BaseAttack):
                 rest_idx = idx[self.m:]
                 rest = all_pop[rest_idx[torch.randperm(len(rest_idx))[:self.mu - self.m]]]
 
-                population = torch.cat([elites, rest], dim=0)
+                population = torch.cat([elites, rest], dim=0).squeeze(1)
 
             print(
                    f"[Eval {num_eval}] "
