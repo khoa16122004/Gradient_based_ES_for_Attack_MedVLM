@@ -303,7 +303,7 @@ class ESGD_Attack(BaseAttack):
         mu=4,
         lam=16,
         m=2,
-        Ks=5,
+        Ks=3,
         Kv=1,
         alpha=0.01,
         sigma=0.5,
@@ -325,12 +325,12 @@ class ESGD_Attack(BaseAttack):
         best_z = z.detach().clone()
 
         delta = self.z_to_delta(z)
-        delta = project_delta(delta, self.eps, self.norm)
-        best_f, _ = self.evaluator.evaluate_whitebox(delta)
+        best_f, _ = self.evaluator.evaluate_whitebox(
+            project_delta(delta, self.eps, self.norm)
+        )
 
         for _ in range(self.Ks):
             delta = self.z_to_delta(z)
-            delta = project_delta(delta, self.eps, self.norm)
             margin, _ = self.evaluator.evaluate_whitebox(delta)
             loss = margin.mean()
             loss.backward()
@@ -340,25 +340,22 @@ class ESGD_Attack(BaseAttack):
                 z.grad.zero_()
 
             delta_new = self.z_to_delta(z)
-            delta_new = project_delta(delta_new, self.eps, self.norm)
-            f_new, _ = self.evaluator.evaluate_whitebox(delta_new)
+            f_new, _ = self.evaluator.evaluate_whitebox(
+                project_delta(delta_new, self.eps, self.norm)
+            )
 
             if f_new < best_f:
                 best_f = f_new
                 best_z = z.detach().clone()
-            else:
-                z = best_z.clone().detach().requires_grad_(True)
 
         return best_z.detach()
 
     def run(self):
-
         _, C, H, W = self.evaluator.img_tensor.shape
 
         population = torch.randn(
             (self.mu, C, H, W),
-            device=self.device,
-            generator=g_gpu
+            device=self.device
         )
 
         num_eval = 0
@@ -370,46 +367,57 @@ class ESGD_Attack(BaseAttack):
             for i in range(self.mu):
                 population[i] = self.sgd_refine(population[i])
 
-            deltas = self.z_to_delta(population)
-            deltas = project_delta(deltas, self.eps, self.norm)
+            deltas = project_delta(
+                self.z_to_delta(population),
+                self.eps,
+                self.norm
+            )
+
             margins, _ = self.evaluate_population(deltas)
             num_eval += self.mu
 
             idx_best = torch.argmin(margins)
             if margins[idx_best] < best_margin:
-                best_margin = float(margins[idx_best].item())
+                best_margin = float(margins[idx_best])
                 best_delta = deltas[idx_best].clone()
 
             if self.is_success(best_margin):
                 break
 
             for _ in range(self.Kv):
-                noise = torch.randn(
-                    (self.lam, C, H, W),
-                    device=self.device,
-                    generator=g_gpu
-                )
+                parents = population[
+                    torch.randint(0, self.mu, (self.lam,), device=self.device)
+                ]
 
-                parents = population[torch.randint(0, self.mu, (self.lam,))]
-                offspring = parents - self.sigma * noise
+                noise = torch.randn_like(parents)
+                offspring = parents + self.sigma * noise
 
                 all_pop = torch.cat([population, offspring], dim=0)
-                all_delta = self.z_to_delta(all_pop)
-                all_delta = project_delta(all_delta, self.eps, self.norm)
+
+                all_delta = project_delta(
+                    self.z_to_delta(all_pop),
+                    self.eps,
+                    self.norm
+                )
 
                 margins, _ = self.evaluate_population(all_delta)
                 num_eval += all_pop.size(0)
 
                 idx = torch.argsort(margins)
-                elites = all_pop[idx[:self.m]]
-                rest_idx = idx[self.m:]
-                rest = all_pop[rest_idx[torch.randperm(len(rest_idx))[:self.mu - self.m]]]
 
-                population = torch.cat([elites, rest], dim=0).squeeze(1)
+                elites = all_pop[idx[:self.m]]
+                rest = all_pop[
+                    idx[self.m:][
+                        torch.randperm(len(idx) - self.m, device=self.device)
+                        [: self.mu - self.m]
+                    ]
+                ]
+
+                population = torch.cat([elites, rest], dim=0)
 
             print(
-                   f"[Eval {num_eval}] "
-                    f"Best margin: {best_margin:.6f}"
+                f"[Eval {num_eval}] "
+                f"Best margin: {best_margin:.6f}"
             )
 
         return {
@@ -417,3 +425,4 @@ class ESGD_Attack(BaseAttack):
             "best_margin": best_margin,
             "num_evaluation": num_eval
         }
+
