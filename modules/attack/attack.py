@@ -371,6 +371,7 @@ class ESGD_Attack(BaseAttack):
                 population[i] = self.sgd_refine(population[i])
 
             deltas = self.z_to_delta(population)
+            print(deltas.shape)
             deltas = project_delta(deltas, self.eps, self.norm)
             margins, _ = self.evaluate_population(deltas)
             num_eval += self.mu
