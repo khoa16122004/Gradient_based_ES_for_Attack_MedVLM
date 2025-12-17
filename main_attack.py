@@ -197,8 +197,12 @@ def main(args):
         result = attacker.run()
         delta = result['best_delta']
         adv_imgs, pil_adv_imgs = evaluator.take_adv_img(delta)            
-        img_feats = model.encode_posttransform_image(adv_imgs)
-        
+        if args.mode == "post_transform": # knowing transform
+            img_feats = model.encode_posttransform_image(adv_imgs) # (B, NUM_CLASS)
+            
+        elif args.mode == "pre_transform":
+            img_feats = model.encode_pretransform_image(adv_imgs)  # (B, D)
+                    
         sims = img_feats @ evaluator.class_text_feats.T                     # (B, NUM_CLASS)
         adv_preds = sims.argmax(dim=-1).item()                    # (B,)
         # print("Adv preds: ", preds)
