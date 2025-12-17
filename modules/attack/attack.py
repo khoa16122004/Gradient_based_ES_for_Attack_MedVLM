@@ -71,12 +71,10 @@ class ES_1_Lambda(BaseAttack):
                 l2_m = l2_best
                 f_m = f_best
                 sigma *= self.c_inc
-                # sigma = min(self.eps, self.sigma)
             else:
                 sigma *= self.c_dec            
-                # sigma = max(1e-6, sigma)     
             
-            print(f"[{num_evaluation} - attack phase] Best loss: ", f_m, " L2: ", l2_m )
+            # print(f"[{num_evaluation} - attack phase] Best loss: ", f_m, " L2: ", l2_m )
             history.append([float(f_m), delta_m.cpu()])
             if self.is_success(f_m):
                 break
