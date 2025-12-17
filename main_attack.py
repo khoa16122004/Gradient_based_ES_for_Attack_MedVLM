@@ -95,21 +95,23 @@ def main(args):
         eps=args.epsilon,
         norm=args.norm,
         target_image_feat=target_image_feat,
-        target_text_feat=target_text_feat
+        target_text_feat=target_text_feat,
+        mode=args.mode
     )
+
     
     # path dir save
     if args.attacker_name == "ES_1_Lambda":
         # ko có lkambda mặt định là 50
-        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_lamda={args.lamda}_norm={args.norm}_seed={args.seed}")
+        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_lamda={args.lamda}_norm={args.norm}_seed={args.seed}")
     elif args.attacker_name == "PGD":
-        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_steps={args.PGD_steps}_alpha={args.alpha}_norm={args.norm}_seed={args.seed}")
+        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_steps={args.PGD_steps}_alpha={args.alpha}_norm={args.norm}_seed={args.seed}")
     elif args.attacker_name == "ES_1_Lambda_Gradient":
-        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_theta={args.theta}_lamda={args.lamda}_norm={args.norm}_seed={args.seed}")
+        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_theta={args.theta}_lamda={args.lamda}_norm={args.norm}_seed={args.seed}")
     elif args.attacker_name == "CEM":
-        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_lamda={args.lamda}_mu={args.mu}_norm={args.norm}_seed={args.seed}")
+        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_lamda={args.lamda}_mu={args.mu}_norm={args.norm}_seed={args.seed}")
     elif args.attacker_name == "ESGD":
-        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_epsilon={args.epsilon}_lamda={args.lamda}_mu={args.mu}_norm={args.norm}_seed={args.seed}")
+        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_lamda={args.lamda}_mu={args.mu}_norm={args.norm}_seed={args.seed}")
     os.makedirs(save_dir, exist_ok=True)
     
     
@@ -170,9 +172,16 @@ def main(args):
         label_id = _extract_label(label_dict)
 
 
-        img_attack = size_transform(img).convert("RGB")
-        img_attack_tensor = _toTensor(img_attack).unsqueeze(0).cuda()
-        img_feats = model.encode_posttransform_image(img_attack_tensor)
+        if args.mode == "post_transform": # knowing transform
+            img_attack = size_transform(img).convert("RGB")
+            img_attack_tensor = _toTensor(img_attack).unsqueeze(0).cuda()
+            img_feats = model.encode_posttransform_image(img_attack_tensor)
+        
+        elif args.mode == "pre_transform": # w/o knoiwng transform
+            img_attack = img.convert("RGB")
+            img_attack_tensor = _toTensor(img_attack).unsqueeze(0).cuda()
+            img_feats = model.encode_pretransform_image(img_attack_tensor)
+
       
         # re-evaluation
         sims = img_feats @ evaluator.class_text_feats.T                     # (B, NUM_CLASS)
@@ -259,6 +268,7 @@ def get_args():
     parser.add_argument("--end_idx", type=int, default=None)
     parser.add_argument("--target_image", type=str, default=None)
     parser.add_argument("--target_text", type=str, default=None)
+    parser.add_argument("--mode", type=str,)
 
     # Misc
     parser.add_argument("--seed", type=int, default=42,

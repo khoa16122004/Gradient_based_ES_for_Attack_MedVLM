@@ -15,6 +15,7 @@ class EvaluatePerturbation:
         norm: str='linf',
         target_image_feat: str = None,
         target_text_feat: str = None,
+        mode: str = "post_transform"
     ):
         self.model = model
         self.class_text_feats = self.extract_centroid_vector(class_prompts)
@@ -22,6 +23,7 @@ class EvaluatePerturbation:
         self.norm = norm
         self.target_image_feat = target_image_feat
         self.target_text_feat = target_text_feat
+        self.mode = mode
         
     def set_data(self, image, clean_pred_id):
         self.img = image
@@ -52,6 +54,11 @@ class EvaluatePerturbation:
         adv_imgs = torch.clamp(adv_imgs, 0, 1)
         adv_feats = self.model.encode_posttransform_image(adv_imgs)  # (B, D)
 
+        if self.mode == "post_transform":
+            adv_feats = self.model.encode_posttransform_image(adv_imgs)  # (B, D)
+        
+        elif self.mode == "pre_transform":
+            adv_feats = self.model.encode_pretransform_image(adv_imgs)  # (B, D)
         
         sims = adv_feats @ self.class_text_feats.T     # (B, NUM_CLASSES)
         correct_sim = sims[:, self.clean_pred_id].unsqueeze(-1)
@@ -80,8 +87,12 @@ class EvaluatePerturbation:
         adv_imgs = self.img_tensor + perturbations_
         adv_imgs = torch.clamp(adv_imgs, 0, 1)
                 
-        adv_feats = self.model.encode_posttransform_image(adv_imgs)  # (B, D)
+        if self.mode == "post_transform":
+            adv_feats = self.model.encode_posttransform_image(adv_imgs)  # (B, D)
         
+        elif self.mode == "pre_transform":
+            adv_feats = self.model.encode_pretransform_image(adv_imgs)  # (B, D)
+                    
         sims = adv_feats @ self.class_text_feats.T     # (B, NUM_CLASSES)
         # Correct class similarity
         correct_sim = sims[:, self.clean_pred_id].unsqueeze(-1)
