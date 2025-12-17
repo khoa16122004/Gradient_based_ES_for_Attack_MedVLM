@@ -47,7 +47,7 @@ class BioMedCLIPModel(VisionLanguageModel):
         if checkpoint is not None:
             self.load_checkpoint(checkpoint)
         else:
-            repo_id = "Woffy/Thesis_Pretrained_Medical_Model"
+            repo_id = "Woffy/Thesis_Pretrained_Medical_Moddel"
             file_name = "biomedclip.pth"
             local_path = hf_hub_download(repo_id=repo_id, filename=file_name)
             model_state_dict = torch.load(local_path)['model_state_dict']
@@ -750,4 +750,5 @@ if __name__ == '__main__':
     print("\n" + "=" * 80)
     print("✅ Testing completed!")
     print("=" * 80)
-    
+
+
