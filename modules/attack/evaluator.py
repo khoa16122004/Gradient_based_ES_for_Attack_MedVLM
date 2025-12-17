@@ -52,7 +52,6 @@ class EvaluatePerturbation:
         perturbations_ = perturbations.clone()
         adv_imgs = self.img_tensor + perturbations_
         adv_imgs = torch.clamp(adv_imgs, 0, 1)
-        adv_feats = self.model.encode_posttransform_image(adv_imgs)  # (B, D)
 
         if self.mode == "post_transform":
             adv_feats = self.model.encode_posttransform_image(adv_imgs)  # (B, D)
