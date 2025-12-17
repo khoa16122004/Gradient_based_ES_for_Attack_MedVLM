@@ -161,7 +161,7 @@ class MedCLIPModel(VisionLanguageModel):
             self.load_checkpoint(checkpoint)
         else:
             repo_id = "Woffy/Thesis_Pretrained_Medical_Moddel"
-            file_name = "medclip.pth"
+            file_name = "medclip.pt"
             local_path = hf_hub_download(repo_id=repo_id, filename=file_name)
             model_state_dict = torch.load(local_path)['model_state_dict']
             model_state_dict = self._strip_prefix_from_state_dict(model_state_dict, 'model.')
