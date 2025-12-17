@@ -19,7 +19,7 @@ from .base import VisionLanguageModel
 from torchvision import transforms
 from torchvision.transforms import InterpolationMode
 from huggingface_hub import hf_hub_download
-
+from collections import OrderedDict
 class MedCLIPTextModel(nn.Module):
     def __init__(self,
         bert_type=constants.BERT_TYPE,
@@ -194,7 +194,20 @@ class MedCLIPModel(VisionLanguageModel):
             return MedCLIPTextModel(proj_bias=False)
         else:
             raise ValueError(f"Unsupported text encoder type: {encoder_type}")
-    
+   
+    def _strip_prefix_from_state_dict(self, sd, prefixes=('visual.', 'module.', 'model.')):
+
+        if isinstance(sd, dict) and 'state_dict' in sd and isinstance(sd['state_dict'], dict):
+            sd = sd['state_dict']
+
+        new_sd = OrderedDict()
+        for k, v in sd.items():
+            nk = k
+            for p in prefixes:
+                if nk.startswith(p):
+                    nk = nk[len(p):]
+            new_sd[nk] = v
+        return new_sd
     def _create_vision_encoder(self, encoder_type: str, checkpoint=None):
         """Create vision encoder based on type"""
         if encoder_type == 'resnet':
