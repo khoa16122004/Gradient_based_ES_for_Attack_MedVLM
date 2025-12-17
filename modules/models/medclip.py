@@ -158,7 +158,15 @@ class MedCLIPModel(VisionLanguageModel):
         # Load full model checkpoint if provided
         if checkpoint is not None:
             self.load_checkpoint(checkpoint)
-        
+        else:
+            repo_id = "Woffy/Thesis_Pretrained_Medical_Moddel"
+            file_name = "medclip.pth"
+            local_path = hf_hub_download(repo_id=repo_id, filename=file_name)
+            model_state_dict = torch.load(local_path)['model_state_dict']
+            model_state_dict = self._strip_prefix_from_state_dict(model_state_dict, 'model.')
+
+            incompatible_keys = self.load_state_dict(model_state_dict, strict=True)
+            print(f"Incompatible keys when load {local_path}: {incompatible_keys}")
         # Load vision-specific pretrained weights if provided
         if vision_pretrained is not None:
             self.load_vision_pretrained(vision_pretrained)
