@@ -10,6 +10,7 @@ from ..utils import constants
 import torch.nn.functional as F
 from .base import VisionLanguageModel
 from collections import OrderedDict
+from huggingface_hub import hf_hub_download
 
 
 class BioMedCLIPModel(VisionLanguageModel):
@@ -42,10 +43,17 @@ class BioMedCLIPModel(VisionLanguageModel):
         self.context_length = context_length
         self.normalize_transform = constants.TENSOR_NORMALIZE_TRANSFORM['biomedclip']
         
-        print("preproccess: ", self.preprocess)
         # raise
         if checkpoint is not None:
             self.load_checkpoint(checkpoint)
+        else:
+            repo_id = "Woffy/Thesis_Pretrained_Medical_Model"
+            file_name = "biomedclip.pth"
+            local_path = hf_hub_download(repo_id=repo_id, filename=file_name)
+            model_state_dict = torch.load(local_path)['model_state_dict']
+            incompatible_keys = self.model.load_state_dict(model_state_dict, strict=True)
+            print(f"Incompatible keys when load {local_path}: {incompatible_keys}")
+
         if vision_pretrained is not None:
             state_dict =torch.load(vision_pretrained)['model_state_dict']
             
