@@ -18,6 +18,7 @@ from ..utils import constants
 from .base import VisionLanguageModel
 from torchvision import transforms
 from torchvision.transforms import InterpolationMode
+from huggingface_hub import hf_hub_download
 
 class MedCLIPTextModel(nn.Module):
     def __init__(self,
