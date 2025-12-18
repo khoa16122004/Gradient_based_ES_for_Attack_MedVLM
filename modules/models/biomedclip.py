@@ -215,7 +215,9 @@ class BioMedCLIPModel(VisionLanguageModel):
             Image embeddings tensor
         """
         # Handle different input types
-        images_ = torch.round(images * 255.0).clamp(0, 255)
+        # images_ = torch.round(images * 255.0).clamp(0, 255)
+        images_ = (images * 255.0).clamp(0, 255)
+
         # Resize to model input size
         image_tensors = F.interpolate(images_, size=(224, 224), mode="bilinear", align_corners=False)
         image_tensors = image_tensors / 255.0
