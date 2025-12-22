@@ -210,21 +210,22 @@ def main(args):
         # save_dir
         index_dir = os.path.join(save_dir, str(index))
         os.makedirs(index_dir, exist_ok=True)
-        pil_adv_imgs[0].save(os.path.join(index_dir, f'adv_img.png'))
+        # pil_adv_imgs[0].save(os.path.join(index_dir, f'adv_img.png'))
 
-        img_attack.save(os.path.join(index_dir, "clean_img.png"))
+        # img_attack.save(os.path.join(index_dir, "clean_img.png"))
         
         info = {
             'clean_pred': clean_preds,
             'adv_pred': adv_preds,
             'gt': label_id,
-            'success_iterations': result['num_evaluation']
+            'success_evaluation': result['success_evaluation']
         }
         with open(os.path.join(index_dir, "info.json"), "w") as f:
             json.dump(info, f, indent=4)
 
-        # with open(os.path.join(index_dir, "history.pkl"), "wb") as f:
-        #     pkl.dump(result['history'], f)
+        with open(os.path.join(index_dir, "history.txt"), "w") as f:
+            for (n_eval, score) in result['history']:
+                f.write(f"{str(n_eval)},{str(score)}") 
         
         # with open(os.path.join(index_dir, "adv_img.pkl"), "wb") as f:
         #     pkl.dump(adv_imgs.cpu(), f)

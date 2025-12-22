@@ -48,8 +48,8 @@ class ES_1_Lambda(BaseAttack):
         delta_m = project_delta(delta_m, self.eps, self.norm)
 
         f_m, l2_m = self.evaluator.evaluate_blackbox(delta_m)
-        history = [[float(f_m.item()), delta_m.cpu()]]
-
+        history = [(1, float(f_m.item()))]
+        success_evaluation = None
         num_evaluation = 1
         while num_evaluation < self.max_evaluation:
             # noise = torch.randn((self.lam, C, H, W), device=self.device)
@@ -75,12 +75,12 @@ class ES_1_Lambda(BaseAttack):
                 sigma *= self.c_dec            
             
             # print(f"[{num_evaluation} - attack phase] Best loss: ", f_m, " L2: ", l2_m )
-            history.append([float(f_m), delta_m.cpu()])
-            if self.is_success(f_m):
-                break
+            history.append((num_evaluation, float(f_m)))
+            if self.is_success(f_m) and success_evaluation is None:
+                success_evaluation = num_evaluation
+
             
-            
-        return {"best_delta": delta_m, "best_margin": f_m, "history": history, "num_evaluation": num_evaluation}
+        return {"best_delta": delta_m, "best_margin": f_m, "history": history, "success_evaluation": success_evaluation}
 
 
 
