@@ -169,7 +169,7 @@ def main(args):
             norm=args.norm,
             max_evaluation=args.max_evaluation,
             q=args.q, # random vector query,
-            batch_q=args.batch_q # batch for estimation,
+            batch_q=args.batch_q, # batch for estimation,
             alpha=alpha
         )
     
