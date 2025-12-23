@@ -12,6 +12,7 @@ from .attack import (
     PGDAttack,
     CEM_Attack,
     ESGD_Attack,
+    NES_Attack
 )
 
 # MedCLIP models
@@ -40,5 +41,6 @@ __all__ = [
     ESGD_Attack,
     clamp_eps,
     project_delta,
+    NES_Attack
 
 ]

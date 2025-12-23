@@ -5,7 +5,7 @@ from tqdm import tqdm
 import numpy as np
 import torch
 import json
-from modules.attack.attack import ES_1_Lambda, PGDAttack, ES_1_Lambda_Gradient, CEM_Attack, ESGD_Attack
+from modules.attack.attack import ES_1_Lambda, PGDAttack, ES_1_Lambda_Gradient, CEM_Attack, ESGD_Attack, NES_Attack
 from modules.attack.evaluator import EvaluatePerturbation
 from modules.attack.util import seed_everything 
 from modules.utils.helpers import _extract_label, load_open_clip_model
@@ -162,6 +162,17 @@ def main(args):
             mu=args.mu
         )
     
+    elif args.attacker_name == "NES":
+        attacker = NES_Attack(
+            evaluator=evaluator,
+            eps=args.epsilon,
+            norm=args.norm,
+            max_evaluation=args.max_evaluation,
+            q=args.q # random vector query,
+            batch_q=args.batch_q # batch for estimation,
+            alpha=alpha
+        )
+    
     
 
 
@@ -256,7 +267,7 @@ def get_args():
     
     # Attack configuration
     parser.add_argument("--attacker_name", type=str, required=True,
-                        choices=[ "ES_1_Lambda", "ES_1_Lambda_Gradient", 'PGD', "CEM", "ESGD"],
+                        choices=[ "ES_1_Lambda", "ES_1_Lambda_Gradient", 'PGD', "CEM", "ESGD", "NES"],
                         help="Name of attacker algorithm")
     parser.add_argument("--epsilon", type=float, default=8/255,
                         help="Maximum perturbation magnitude (default: 8/255)")
@@ -274,6 +285,11 @@ def get_args():
     parser.add_argument("--target_image", type=str, default=None)
     parser.add_argument("--target_text", type=str, default=None)
     parser.add_argument("--mode", type=str,)
+
+    # NES
+    parser.add_argument("--alpha", type=float, default=0.01)
+    parser.add_argument("--batch_q", type=int)
+    parser.add_argument("--q", type=int)
 
     # Misc
     parser.add_argument("--seed", type=int, default=42,

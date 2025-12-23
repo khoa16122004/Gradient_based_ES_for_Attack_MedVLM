@@ -424,3 +424,96 @@ class ESGD_Attack(BaseAttack):
             "num_evaluation": num_eval
         }
 
+
+class NES_Attack(BaseAttack):
+    def __init__(
+        self,
+        evaluator,
+        eps=8/255,
+        norm="linf",
+        max_evaluation=10000,
+        q=200,              # tổng số direction
+        batch_q=50,         # batch size để eval
+        alpha=0.01,
+        sigma=0.001,
+        device="cuda",
+    ):
+        super().__init__(evaluator, eps, norm, device)
+        self.q = q
+        self.batch_q = batch_q
+        self.sigma = sigma
+        self.alpha = alpha
+        self.max_evaluation = max_evaluation
+
+    def run(self):
+        _, C, H, W = self.evaluator.img_tensor.shape
+
+        delta = torch.zeros((1, C, H, W), device=self.device)
+        delta = project_delta(delta, self.eps, self.norm)
+
+        margin, _ = self.evaluator.evaluate_blackbox(delta)
+        f_m = float(margin.item())
+
+        history = [(1, f_m)]
+        num_evaluation = 1
+        success_evaluation = None
+
+        while num_evaluation < self.max_evaluation:
+
+            grad = torch.zeros_like(delta)
+            used_q = 0
+
+            while used_q < self.q and num_evaluation < self.max_evaluation:
+                cur_q = min(self.batch_q, self.q - used_q)
+
+                U = torch.randn(
+                    (cur_q, C, H, W),
+                    device=self.device,
+                    generator=g_gpu
+                )
+
+                delta_pos = project_delta(
+                    delta + self.sigma * U,
+                    self.eps,
+                    self.norm
+                )
+                delta_neg = project_delta(
+                    delta - self.sigma * U,
+                    self.eps,
+                    self.norm
+                )
+
+                l_pos, _ = self.evaluate_population(delta_pos)
+                l_neg, _ = self.evaluate_population(delta_neg)
+
+                num_evaluation += 2 * cur_q
+                used_q += cur_q
+
+                grad += (
+                    ((l_pos - l_neg).view(cur_q, 1, 1, 1) * U)
+                    .sum(dim=0, keepdim=True)
+                )
+
+            grad = grad / (2 * self.sigma * used_q)
+
+            # update
+            delta = delta - self.alpha * grad
+            delta = project_delta(delta, self.eps, self.norm)
+
+            margin, _ = self.evaluator.evaluate_blackbox(delta)
+            f_m = float(margin.item())
+            num_evaluation += 1
+
+            history.append((num_evaluation, f_m))
+
+            if self.is_success(f_m) and success_evaluation is None:
+                success_evaluation = num_evaluation
+                break
+
+        return {
+            "best_delta": delta.detach(),
+            "best_margin": f_m,
+            "history": history,
+            "success_evaluation": success_evaluation,
+        }
+
