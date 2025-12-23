@@ -472,16 +472,8 @@ class NES_Attack(BaseAttack):
                     generator=g_gpu
                 )
 
-                delta_pos = project_delta(
-                    delta + self.sigma * U,
-                    self.eps,
-                    self.norm
-                )
-                delta_neg = project_delta(
-                    delta - self.sigma * U,
-                    self.eps,
-                    self.norm
-                )
+                delta_pos = delta + self.sigma * U
+                delta_neg = delta - self.sigma * U
 
                 l_pos, _ = self.evaluate_population(delta_pos)
                 l_neg, _ = self.evaluate_population(delta_neg)
