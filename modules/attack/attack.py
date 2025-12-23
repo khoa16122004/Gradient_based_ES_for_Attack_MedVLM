@@ -490,7 +490,7 @@ class NES_Attack(BaseAttack):
 
             # update
             delta = delta - self.alpha * grad.sign()
-            delta = torch.clamp(delta, -eps, eps)
+            delta = torch.clamp(delta, -self.eps, self.eps)
             margin, l2 = self.evaluator.evaluate_blackbox(delta)
             f_m = float(margin.item())
             num_evaluation += 1
