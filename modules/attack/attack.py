@@ -503,7 +503,10 @@ class NES_Attack(BaseAttack):
             margin, _ = self.evaluator.evaluate_blackbox(delta)
             f_m = float(margin.item())
             num_evaluation += 1
-
+            print(
+                f"[Eval {num_evaluation}] "
+                f"Score: {f_m:.6f}"
+            )
             history.append((num_evaluation, f_m))
 
             if self.is_success(f_m) and success_evaluation is None:
