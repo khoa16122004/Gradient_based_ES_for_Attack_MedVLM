@@ -449,7 +449,7 @@ class NES_Attack(BaseAttack):
         _, C, H, W = self.evaluator.img_tensor.shape
 
         delta = torch.zeros((1, C, H, W), device=self.device)
-        delta = project_delta(delta, self.eps, self.norm)
+        delta = torch.clamp(delta, -eps, eps)
 
         margin, _ = self.evaluator.evaluate_blackbox(delta)
         f_m = float(margin.item())
@@ -472,8 +472,8 @@ class NES_Attack(BaseAttack):
                     generator=g_gpu
                 )
 
-                delta_pos = project_delta(delta + self.sigma * U, self.eps, self.norm)
-                delta_neg = project_delta(delta - self.sigma * U, self.eps, self.norm)
+                delta_pos = delta + self.sigma * U
+                delta_neg = delta - self.sigma * U
 
                 l_pos, _ = self.evaluate_population(delta_pos)
                 l_neg, _ = self.evaluate_population(delta_neg)
@@ -490,8 +490,7 @@ class NES_Attack(BaseAttack):
 
             # update
             delta = delta - self.alpha * grad.sign()
-            delta = project_delta(delta, self.eps, self.norm)
-
+            delta = torch.clamp(delta, -eps, eps)
             margin, l2 = self.evaluator.evaluate_blackbox(delta)
             f_m = float(margin.item())
             num_evaluation += 1
