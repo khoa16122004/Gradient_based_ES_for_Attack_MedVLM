@@ -500,12 +500,12 @@ class NES_Attack(BaseAttack):
             delta = delta - self.alpha * grad
             delta = project_delta(delta, self.eps, self.norm)
 
-            margin, _ = self.evaluator.evaluate_blackbox(delta)
+            margin, l2 = self.evaluator.evaluate_blackbox(delta)
             f_m = float(margin.item())
             num_evaluation += 1
             print(
                 f"[Eval {num_evaluation}] "
-                f"Score: {f_m:.6f}"
+                f"Score: {f_m:.6f} l2: {l2}"
             )
             history.append((num_evaluation, f_m))
 
