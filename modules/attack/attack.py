@@ -449,7 +449,7 @@ class NES_Attack(BaseAttack):
         _, C, H, W = self.evaluator.img_tensor.shape
 
         delta = torch.zeros((1, C, H, W), device=self.device)
-        delta = torch.clamp(delta, -eps, eps)
+        delta = torch.clamp(delta, -self.eps, self.eps)
 
         margin, _ = self.evaluator.evaluate_blackbox(delta)
         f_m = float(margin.item())
