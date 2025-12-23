@@ -103,7 +103,9 @@ def main(args):
     # path dir save
     if args.attacker_name == "ES_1_Lambda":
         # ko có lkambda mặt định là 50
-        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_lamda={args.lamda}_norm={args.norm}_seed={args.seed}")
+    elif args.attacker_name == "NES":
+        # ko có lkambda mặt định là 50
+        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_q={args.q}_norm={args.norm}_seed={args.seed}")
     elif args.attacker_name == "PGD":
         save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_steps={args.PGD_steps}_alpha={args.alpha}_norm={args.norm}_seed={args.seed}")
     elif args.attacker_name == "ES_1_Lambda_Gradient":
