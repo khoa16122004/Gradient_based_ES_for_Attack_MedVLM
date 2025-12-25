@@ -149,8 +149,8 @@ class ES_1_Lambda_Gradient(BaseAttack):
         delta_m = project_delta(delta_m, self.eps, self.norm)
 
         f_m, l2_m = self.evaluator.evaluate_blackbox(delta_m)
-        history = [[float(f_m.item()), delta_m.cpu()]]
-
+        history = [(1, float(f_m.item()))]
+        success_evaluation = None
         num_evaluation = 1
         theta = self.theta
 
@@ -168,8 +168,7 @@ class ES_1_Lambda_Gradient(BaseAttack):
             loss.backward()
             grad_m = m.grad.detach()
             m = m.detach()
-            grad_m = grad_m / (grad_m.norm() + 1e-8)
-            m = m - theta * grad_m # gradient guided
+            m = m - theta * grad_m.sign() # gradient guided
 
 
             noise = torch.randn((self.lam, C, H, W), device=self.device, generator=g_gpu)
@@ -195,15 +194,15 @@ class ES_1_Lambda_Gradient(BaseAttack):
             
             # print(f"[{num_evaluation} - attack phase] Best loss: ", f_m, " L2: ", l2_m )
 
-            # history.append([float(f_m), delta_m.cpu()])
-            if self.is_success(f_m):
-                break
+            history.append((num_evaluation, float(f_m)))
+            if self.is_success(f_m) and success_evaluation is None:
+                success_evaluation = num_evaluation
 
         return {
             "best_delta": delta_m,
             "best_margin": f_m,
-            "history": None,
-            "num_evaluation": num_evaluation
+            "history": history,
+            "success_evaluation": success_evaluation
         }
 
 
@@ -494,10 +493,10 @@ class NES_Attack(BaseAttack):
             margin, l2 = self.evaluator.evaluate_blackbox(delta)
             f_m = float(margin.item())
             num_evaluation += 1
-            print(
-                f"[Eval {num_evaluation}] "
-                f"Score: {f_m:.6f} l2: {l2}"
-            )
+            # print(
+            #     f"[Eval {num_evaluation}] "
+            #     f"Score: {f_m:.6f} l2: {l2}"
+            # )
             history.append((num_evaluation, f_m))
 
             if self.is_success(f_m) and success_evaluation is None:
