@@ -511,140 +511,6 @@ class NES_Attack(BaseAttack):
         }
 
 
-# def grid_decode(z, patch_size, H, W):
-#     """
-#     z: (B, N_patch, 3)
-#     return: (B, 3, H, W)
-#     """
-#     B, N, C = z.shape
-#     ph = pw = patch_size
-#     gh = H // ph
-#     gw = W // pw
-
-#     z = z.view(B, gh, gw, C)          # B,gh,gw,3
-#     z = z.permute(0, 3, 1, 2)          # B,3,gh,gw
-#     z = z.repeat_interleave(ph, dim=2)
-#     z = z.repeat_interleave(pw, dim=3)
-#     return z
-
-# class GridAttack(BaseAttack):
-#     def __init__(self, evaluator, patch_size=16, **kwargs):
-#         super().__init__(evaluator, **kwargs)
-
-#         _, self.C, self.H, self.W = evaluator.img_tensor.shape
-#         self.patch = patch_size
-#         assert self.H % patch_size == 0
-#         assert self.W % patch_size == 0
-
-#         self.gh = self.H // patch_size
-#         self.gw = self.W // patch_size
-#         self.Np = self.gh * self.gw   # number of patches
-
-#     def z_to_delta(self, z):
-#         """
-#         z: (B, N_patch, 3)
-#         """
-#         s = torch.tanh(z)
-#         delta = grid_decode(s, self.patch, self.H, self.W)
-#         return self.eps * delta
-
-# class GridES_1_Lambda(GridAttack):
-#     def __init__(
-#         self,
-#         evaluator,
-#         patch_size=16,
-#         eps=8/255,
-#         norm="linf",
-#         max_evaluation=10000,
-#         lam=64,
-#         c_inc=1.5,
-#         c_dec=0.9,
-#         sigma=1.0,
-#         device="cuda"
-#     ):
-#         super().__init__(
-#             evaluator=evaluator,
-#             patch_size=patch_size,
-#             eps=eps,
-#             norm=norm,
-#             device=device
-#         )
-
-#         self.lam = lam
-#         self.c_inc = c_inc
-#         self.c_dec = c_dec
-#         self.sigma = sigma
-#         self.max_evaluation = max_evaluation
-
-#     def run(self):
-
-#         # mean in patch-space
-#         m = torch.randn(
-#             (1, self.Np, self.C),
-#             device=self.device
-#         )
-
-#         delta_m = project_delta(
-#             self.z_to_delta(m),
-#             self.eps,
-#             self.norm
-#         )
-
-#         f_m, l2_m = self.evaluator.evaluate_blackbox(delta_m)
-#         num_eval = 1
-#         history = [(num_eval, float(f_m))]
-
-#         success_eval = None
-#         sigma = self.sigma
-
-#         while num_eval < self.max_evaluation:
-
-#             noise = torch.randn(
-#                 (self.lam, self.Np, self.C),
-#                 device=self.device,
-#                 generator=g_gpu
-#             )
-
-#             Z = m + sigma * noise
-
-#             deltas = project_delta(
-#                 self.z_to_delta(Z),
-#                 self.eps,
-#                 self.norm
-#             )
-
-#             margins, l2s = self.evaluate_population(deltas)
-#             num_eval += self.lam
-
-#             idx = torch.argmin(margins)
-#             f_best = float(margins[idx])
-#             l2_best = float(l2s[idx])
-
-#             if f_best < f_m:
-#                 m = Z[idx:idx+1].clone()
-#                 f_m = f_best
-#                 l2_m = l2_best
-#                 sigma *= self.c_inc
-#             else:
-#                 sigma *= self.c_dec
-
-#             history.append((num_eval, f_m))
-
-#             if self.is_success(f_m) and success_eval is None:
-#                 success_eval = num_eval
-#                 break
-
-#             print(
-#                 f"[Eval {num_eval}] "
-#                 f"Best margin: {f_m:.6f} | L2: {l2_m:.4f}"
-#             )
-
-#         return {
-#             "best_delta": self.z_to_delta(m).detach(),
-#             "best_margin": f_m,
-#             "history": history,
-#             "success_evaluation": success_eval
-#         }
 
 
 def grid_patch_mask(patch_idx, patch_size, H, W, device):
@@ -674,7 +540,7 @@ def grid_local_es(
     steps=10,
     sigma=0.5,
     device="cuda",
-    start_eval=0   # để align với global evaluation
+    start_eval=0
 ):
     _, C, H, W = base_delta.shape
 
@@ -686,6 +552,8 @@ def grid_local_es(
 
     history = []
     eval_cnt = start_eval
+
+    local_success_eval = None
 
     print(f"    [LocalES] start | margin = {f_best:.6f}")
 
@@ -714,13 +582,18 @@ def grid_local_es(
 
         history.append((eval_cnt, f_best))
 
+        # ⭐ SUCCESS CHECK NGAY TẠI LOCAL
+        if f_best < 0 and local_success_eval is None:
+            local_success_eval = eval_cnt
+
         print(
             f"    [LocalES][{step+1:03d}/{steps}] "
             f"eval = {eval_cnt:6d} | "
             f"best = {f_best:.6f} | {status}"
         )
 
-    return best_delta, f_best, history
+    return best_delta, f_best, history, local_success_eval
+
 
 
 
@@ -750,86 +623,88 @@ class GridES_1_Lambda(BaseAttack):
         self.sigma = sigma
         self.max_evaluation = max_evaluation
 
-    def run(self):
+def run(self):
 
-        delta = torch.zeros_like(self.evaluator.img_tensor)
-        f_best, _ = self.evaluator.evaluate_blackbox(delta)
-        f_best = float(f_best)
+    delta = torch.zeros_like(self.evaluator.img_tensor)
+    f_best, _ = self.evaluator.evaluate_blackbox(delta)
+    f_best = float(f_best)
 
-        used_eval = 1
-        tried = set()
-        round_id = 0
+    used_eval = 1
+    tried = set()
+    round_id = 0
 
-        history = [(used_eval, f_best)]
-        success_evaluation = None
+    history = [(used_eval, f_best)]
+    success_evaluation = None
 
-        print(f"[GridES] start | eval = {used_eval} | margin = {f_best:.6f}")
+    print(f"[GridES] start | eval = {used_eval} | margin = {f_best:.6f}")
 
-        while used_eval < self.max_evaluation:
+    while used_eval < self.max_evaluation:
 
-            round_id += 1
+        round_id += 1
 
-            if len(tried) == self.Np:
-                tried.clear()
+        if len(tried) == self.Np:
+            tried.clear()
 
-            patch_idx = np.random.choice(
-                list(set(range(self.Np)) - tried)
-            )
-            tried.add(patch_idx)
+        patch_idx = np.random.choice(
+            list(set(range(self.Np)) - tried)
+        )
+        tried.add(patch_idx)
 
-            print(
-                f"\n[GridES][Round {round_id}] "
-                f"Explore patch {patch_idx} | eval = {used_eval}"
-            )
+        print(
+            f"\n[GridES][Round {round_id}] "
+            f"Explore patch {patch_idx} | eval = {used_eval}"
+        )
 
-            mask = grid_patch_mask(
-                patch_idx,
-                self.patch,
-                self.H,
-                self.W,
-                self.device
-            )
+        mask = grid_patch_mask(
+            patch_idx,
+            self.patch,
+            self.H,
+            self.W,
+            self.device
+        )
 
-            delta_new, f_new, local_history = grid_local_es(
-                evaluator=self.evaluator,
-                base_delta=delta,
-                mask=mask,
-                eps=self.eps,
-                norm=self.norm,
-                lam=self.lam,
-                steps=self.local_steps,
-                sigma=self.sigma,
-                device=self.device,
-                start_eval=used_eval
-            )
+        # ⭐ local ES trả về success tại local
+        delta_new, f_new, local_history, local_success_eval = grid_local_es(
+            evaluator=self.evaluator,
+            base_delta=delta,
+            mask=mask,
+            eps=self.eps,
+            norm=self.norm,
+            lam=self.lam,
+            steps=self.local_steps,
+            sigma=self.sigma,
+            device=self.device,
+            start_eval=used_eval
+        )
 
-            # merge local history
-            history.extend(local_history)
-            used_eval = history[-1][0]
+        # merge history
+        history.extend(local_history)
+        used_eval = history[-1][0]
 
-            if f_new < f_best:
-                delta = delta_new
-                f_best = f_new
-                tried.clear()
-                status = "IMPROVED"
-            else:
-                status = "NO-IMPROVE"
+        # ⭐ propagate success từ local (KHÔNG break)
+        if success_evaluation is None and local_success_eval is not None:
+            success_evaluation = local_success_eval
 
-            if self.is_success(f_best) and success_evaluation is None:
-                success_evaluation = used_eval
+        if f_new < f_best:
+            delta = delta_new
+            f_best = f_new
+            tried.clear()
+            status = "IMPROVED"
+        else:
+            status = "NO-IMPROVE"
 
-            print(
-                f"[GridES][Round {round_id}] "
-                f"{status} | best margin = {f_best:.6f} | eval = {used_eval}"
-            )
+        print(
+            f"[GridES][Round {round_id}] "
+            f"{status} | best margin = {f_best:.6f} | eval = {used_eval}"
+        )
 
-        return {
-            "best_delta": delta.detach(),
-            "best_margin": f_best,
-            "history": history,
-            "success_evaluation": success_evaluation,
-            "num_evaluation": used_eval
-        }
+    return {
+        "best_delta": delta.detach(),
+        "best_margin": f_best,
+        "history": history,
+        "success_evaluation": success_evaluation,
+        "num_evaluation": used_eval
+    }
 
 
 
