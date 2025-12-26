@@ -507,7 +507,7 @@ class NES_Attack(BaseAttack):
             "best_delta": delta.detach(),
             "best_margin": f_m,
             "history": history,
-            "success_evaluation": success_evaluation,
+            "num_evaluation": success_evaluation,
         }
 
 
