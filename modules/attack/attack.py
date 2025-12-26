@@ -511,6 +511,22 @@ class NES_Attack(BaseAttack):
         }
 
 
+def grid_decode(z, patch_size, H, W):
+    """
+    z: (B, N_patch, 3)
+    return: (B, 3, H, W)
+    """
+    B, N, C = z.shape
+    ph = pw = patch_size
+    gh = H // ph
+    gw = W // pw
+
+    z = z.view(B, gh, gw, C)          # B,gh,gw,3
+    z = z.permute(0, 3, 1, 2)          # B,3,gh,gw
+    z = z.repeat_interleave(ph, dim=2)
+    z = z.repeat_interleave(pw, dim=3)
+    return z
+
 class GridAttack(BaseAttack):
     def __init__(self, evaluator, patch_size=16, **kwargs):
         super().__init__(evaluator, **kwargs)

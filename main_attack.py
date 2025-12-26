@@ -99,6 +99,17 @@ def main(args):
         mode=args.mode
     )
 
+    if args.mode == "post_transform": # knowing transform
+        img_attack = size_transform(img).convert("RGB")
+    elif args.mode == "pre_transform": # w/o knoiwng transform
+        img_attack = img.convert("RGB")
+
+    attacker.evaluator.set_data( # setting size
+        image=img_attack,
+        clean_pred_id=None
+    )
+          
+
     
     # path dir save
     if args.attacker_name == "ES_1_Lambda":
