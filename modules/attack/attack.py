@@ -703,7 +703,7 @@ def grid_local_es(
     return best_delta, float(f_best)
 
 
-class GridES_Explore_1_Lambda(BaseAttack):
+class GridES_1_Lambda(BaseAttack):
     def __init__(
         self,
         evaluator,
