@@ -736,10 +736,17 @@ class GridES_1_Lambda(BaseAttack):
 
         used_eval = 1
         tried = set()
+        round_id = 0
+
+        success_evaluation = None
+
+        print(f"[GridES] Start | init margin = {float(f_best):.6f}")
 
         while used_eval < self.max_evaluation:
 
-            # --- Grid exploration: random patch
+            round_id += 1
+
+            # --- Grid exploration
             if len(tried) == self.Np:
                 tried.clear()
 
@@ -768,24 +775,38 @@ class GridES_1_Lambda(BaseAttack):
                 device=self.device
             )
 
-            used_eval += self.lam * self.local_steps
+            eval_cost = self.lam * self.local_steps
+            used_eval += eval_cost
 
-            if f_new < f_best:
+            improved = f_new < f_best
+
+            if improved:
                 delta = delta_new
                 f_best = f_new
-                tried.clear()  # exploit tiếp patch mới
-                print(f"[Grid Patch {patch_idx}] Improved -> {f_best:.6f}")
+                tried.clear()   # exploit tiếp
+                status = "IMPROVED"
             else:
-                print(f"[Grid Patch {patch_idx}] No improvement")
+                status = "NO-IMPROVE"
 
-            if self.is_success(f_best):
-                break
+            # --- track success but DO NOT break
+            if self.is_success(f_best) and success_evaluation is None:
+                success_evaluation = used_eval
+
+            # --- light logging (giống ES_1_Lambda)
+            print(
+                f"[Eval {used_eval:6d}] "
+                f"Patch {patch_idx:3d} | "
+                f"{status:10s} | "
+                f"best margin = {f_best:.6f}"
+            )
 
         return {
             "best_delta": delta.detach(),
             "best_margin": f_best,
+            "success_evaluation": success_evaluation,
             "num_evaluation": used_eval
         }
+
 
 
 
