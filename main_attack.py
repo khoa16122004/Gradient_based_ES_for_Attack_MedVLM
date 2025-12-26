@@ -105,7 +105,7 @@ def main(args):
     elif args.mode == "pre_transform": # w/o knoiwng transform
         img_attack = img.convert("RGB")
 
-    attacker.evaluator.set_data( # setting size
+    evaluator.set_data( # setting size
         image=img_attack,
         clean_pred_id=None
     )
