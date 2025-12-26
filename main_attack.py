@@ -198,7 +198,8 @@ def main(args):
             patch_size=args.patch_size,
             eps=args.epsilon,
             max_evaluation=args.max_evaluation,
-            lam=args.lamda
+            lam=args.lamda,
+            local_steps=args.local_step
         )
     
     
@@ -313,6 +314,7 @@ def get_args():
     parser.add_argument("--target_text", type=str, default=None)
     parser.add_argument("--mode", type=str,)
     parser.add_argument("--patch_size", type=int)
+    parser.add_argument("--local_steps", type=int)
     # NES
     parser.add_argument("--alpha", type=float, default=0.01)
     parser.add_argument("--batch_q", type=int)
