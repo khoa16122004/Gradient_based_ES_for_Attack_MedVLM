@@ -121,7 +121,7 @@ class PGDAttack(BaseAttack):
             "best_delta": delta.detach(),
             "best_margin": float(final_margin.item()),
             "history": None,
-            "num_evaluation": step
+            "success_evaluation": step
         }
 
 
