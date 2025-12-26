@@ -87,7 +87,8 @@ def main(args):
     else:
         target_text_feat = None
 
-        
+    
+    # ============= evaluatỏ =================
 
     evaluator = EvaluatePerturbation(
         model=model,
@@ -98,7 +99,7 @@ def main(args):
         target_text_feat=target_text_feat,
         mode=args.mode
     )
-
+    img, label_dict = dataset[0]
     if args.mode == "post_transform": # knowing transform
         img_attack = size_transform(img).convert("RGB")
     elif args.mode == "pre_transform": # w/o knoiwng transform
