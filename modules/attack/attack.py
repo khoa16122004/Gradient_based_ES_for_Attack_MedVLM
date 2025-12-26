@@ -97,17 +97,22 @@ class PGDAttack(BaseAttack):
     def run(self):
         delta = torch.zeros_like(self.evaluator.img_tensor).to(self.evaluator.img_tensor.device)
         delta.requires_grad = True
-
+        success_evaluation = None
+        history = []
         for step in range(self.steps):
-            margin, _ = self.evaluator.evaluate_whitebox(delta)
+            margin, l2 = self.evaluator.evaluate_whitebox(delta)
             loss = margin.mean()
-            print("Loss: ", loss)
+            history.append((step, float(loss.item())))
+            # print("Loss: ", loss)
             loss.backward()
-            # if loss < 0:
-            #     break
+            if loss < 0 and success_evaluation is None:
+                success_evaluation = success_evaluation
+                
             with torch.no_grad():
                 if self.norm == "linf":
-                    delta.data = delta - self.alpha * delta.grad.sign()
+                    grad_norm = torch.norm(delta.grad.view(delta.size(0), -1), dim=1).view(-1, 1, 1, 1)
+                    scaled_grad = delta.grad / (grad_norm + 1e-10)
+                    delta.data = delta - self.alpha * scaled_grad
                     delta.data = clamp_eps(delta.data, self.eps, norm="linf")
                 elif self.norm == "l2":
                     grad_norm = torch.norm(delta.grad.view(delta.size(0), -1), dim=1).view(-1, 1, 1, 1)
