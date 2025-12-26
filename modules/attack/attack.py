@@ -623,88 +623,88 @@ class GridES_1_Lambda(BaseAttack):
         self.sigma = sigma
         self.max_evaluation = max_evaluation
 
-def run(self):
+    def run(self):
 
-    delta = torch.zeros_like(self.evaluator.img_tensor)
-    f_best, _ = self.evaluator.evaluate_blackbox(delta)
-    f_best = float(f_best)
+        delta = torch.zeros_like(self.evaluator.img_tensor)
+        f_best, _ = self.evaluator.evaluate_blackbox(delta)
+        f_best = float(f_best)
 
-    used_eval = 1
-    tried = set()
-    round_id = 0
+        used_eval = 1
+        tried = set()
+        round_id = 0
 
-    history = [(used_eval, f_best)]
-    success_evaluation = None
+        history = [(used_eval, f_best)]
+        success_evaluation = None
 
-    print(f"[GridES] start | eval = {used_eval} | margin = {f_best:.6f}")
+        print(f"[GridES] start | eval = {used_eval} | margin = {f_best:.6f}")
 
-    while used_eval < self.max_evaluation:
+        while used_eval < self.max_evaluation:
 
-        round_id += 1
+            round_id += 1
 
-        if len(tried) == self.Np:
-            tried.clear()
+            if len(tried) == self.Np:
+                tried.clear()
 
-        patch_idx = np.random.choice(
-            list(set(range(self.Np)) - tried)
-        )
-        tried.add(patch_idx)
+            patch_idx = np.random.choice(
+                list(set(range(self.Np)) - tried)
+            )
+            tried.add(patch_idx)
 
-        print(
-            f"\n[GridES][Round {round_id}] "
-            f"Explore patch {patch_idx} | eval = {used_eval}"
-        )
+            print(
+                f"\n[GridES][Round {round_id}] "
+                f"Explore patch {patch_idx} | eval = {used_eval}"
+            )
 
-        mask = grid_patch_mask(
-            patch_idx,
-            self.patch,
-            self.H,
-            self.W,
-            self.device
-        )
+            mask = grid_patch_mask(
+                patch_idx,
+                self.patch,
+                self.H,
+                self.W,
+                self.device
+            )
 
-        # ⭐ local ES trả về success tại local
-        delta_new, f_new, local_history, local_success_eval = grid_local_es(
-            evaluator=self.evaluator,
-            base_delta=delta,
-            mask=mask,
-            eps=self.eps,
-            norm=self.norm,
-            lam=self.lam,
-            steps=self.local_steps,
-            sigma=self.sigma,
-            device=self.device,
-            start_eval=used_eval
-        )
+            # ⭐ local ES trả về success tại local
+            delta_new, f_new, local_history, local_success_eval = grid_local_es(
+                evaluator=self.evaluator,
+                base_delta=delta,
+                mask=mask,
+                eps=self.eps,
+                norm=self.norm,
+                lam=self.lam,
+                steps=self.local_steps,
+                sigma=self.sigma,
+                device=self.device,
+                start_eval=used_eval
+            )
 
-        # merge history
-        history.extend(local_history)
-        used_eval = history[-1][0]
+            # merge history
+            history.extend(local_history)
+            used_eval = history[-1][0]
 
-        # ⭐ propagate success từ local (KHÔNG break)
-        if success_evaluation is None and local_success_eval is not None:
-            success_evaluation = local_success_eval
+            # ⭐ propagate success từ local (KHÔNG break)
+            if success_evaluation is None and local_success_eval is not None:
+                success_evaluation = local_success_eval
 
-        if f_new < f_best:
-            delta = delta_new
-            f_best = f_new
-            tried.clear()
-            status = "IMPROVED"
-        else:
-            status = "NO-IMPROVE"
+            if f_new < f_best:
+                delta = delta_new
+                f_best = f_new
+                tried.clear()
+                status = "IMPROVED"
+            else:
+                status = "NO-IMPROVE"
 
-        print(
-            f"[GridES][Round {round_id}] "
-            f"{status} | best margin = {f_best:.6f} | eval = {used_eval}"
-        )
+            print(
+                f"[GridES][Round {round_id}] "
+                f"{status} | best margin = {f_best:.6f} | eval = {used_eval}"
+            )
 
-    return {
-        "best_delta": delta.detach(),
-        "best_margin": f_best,
-        "history": history,
-        "success_evaluation": success_evaluation,
-        "num_evaluation": used_eval
-    }
+        return {
+            "best_delta": delta.detach(),
+            "best_margin": f_best,
+            "history": history,
+            "success_evaluation": success_evaluation,
+            "num_evaluation": used_eval
+        }
 
 
 
