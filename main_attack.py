@@ -5,7 +5,7 @@ from tqdm import tqdm
 import numpy as np
 import torch
 import json
-from modules.attack.attack import ES_1_Lambda, PGDAttack, ES_1_Lambda_Gradient, CEM_Attack, ESGD_Attack, NES_Attack
+from modules.attack.attack import ES_1_Lambda, PGDAttack, ES_1_Lambda_Gradient, CEM_Attack, ESGD_Attack, NES_Attack, GridES_1_Lambda
 from modules.attack.evaluator import EvaluatePerturbation
 from modules.attack.util import seed_everything 
 from modules.utils.helpers import _extract_label, load_open_clip_model
@@ -116,6 +116,9 @@ def main(args):
         save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_lamda={args.lamda}_mu={args.mu}_norm={args.norm}_seed={args.seed}")
     elif args.attacker_name == "ESGD":
         save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_lamda={args.lamda}_mu={args.mu}_norm={args.norm}_seed={args.seed}")
+    elif args.attacker_name == "GridES_1_Lambda":
+        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_patch_size={args.patch_size}_lamda={args.lamda}_norm={args.norm}_seed={args.seed}")
+
     os.makedirs(save_dir, exist_ok=True)
     
     
@@ -175,6 +178,15 @@ def main(args):
             q=args.q, # random vector query,
             batch_q=args.batch_q, # batch for estimation,
             alpha=args.alpha
+        )
+
+    elif args.attacker_name == "GridES_1_Lambda":
+        attacker = GridES_1_Lambda(
+            evaluator=evaluator,
+            patch_size=args.patch_size,
+            eps=args.epsilon,
+            max_evaluation=args.max_evaluation,
+            lam=args.lamda
         )
     
     
@@ -288,7 +300,7 @@ def get_args():
     parser.add_argument("--target_image", type=str, default=None)
     parser.add_argument("--target_text", type=str, default=None)
     parser.add_argument("--mode", type=str,)
-
+    parser.add_argument("--patch_size", type=int)
     # NES
     parser.add_argument("--alpha", type=float, default=0.01)
     parser.add_argument("--batch_q", type=int)

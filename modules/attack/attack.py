@@ -510,3 +510,124 @@ class NES_Attack(BaseAttack):
             "success_evaluation": success_evaluation,
         }
 
+
+class GridAttack(BaseAttack):
+    def __init__(self, evaluator, patch_size=16, **kwargs):
+        super().__init__(evaluator, **kwargs)
+
+        _, self.C, self.H, self.W = evaluator.img_tensor.shape
+        self.patch = patch_size
+        assert self.H % patch_size == 0
+        assert self.W % patch_size == 0
+
+        self.gh = self.H // patch_size
+        self.gw = self.W // patch_size
+        self.Np = self.gh * self.gw   # number of patches
+
+    def z_to_delta(self, z):
+        """
+        z: (B, N_patch, 3)
+        """
+        s = torch.tanh(z)
+        delta = grid_decode(s, self.patch, self.H, self.W)
+        return self.eps * delta
+
+class GridES_1_Lambda(GridAttack):
+    def __init__(
+        self,
+        evaluator,
+        patch_size=16,
+        eps=8/255,
+        norm="linf",
+        max_evaluation=10000,
+        lam=64,
+        c_inc=1.5,
+        c_dec=0.9,
+        sigma=1.0,
+        device="cuda"
+    ):
+        super().__init__(
+            evaluator=evaluator,
+            patch_size=patch_size,
+            eps=eps,
+            norm=norm,
+            device=device
+        )
+
+        self.lam = lam
+        self.c_inc = c_inc
+        self.c_dec = c_dec
+        self.sigma = sigma
+        self.max_evaluation = max_evaluation
+
+    def run(self):
+
+        # mean in patch-space
+        m = torch.randn(
+            (1, self.Np, self.C),
+            device=self.device
+        )
+
+        delta_m = project_delta(
+            self.z_to_delta(m),
+            self.eps,
+            self.norm
+        )
+
+        f_m, l2_m = self.evaluator.evaluate_blackbox(delta_m)
+        num_eval = 1
+        history = [(num_eval, float(f_m))]
+
+        success_eval = None
+        sigma = self.sigma
+
+        while num_eval < self.max_evaluation:
+
+            noise = torch.randn(
+                (self.lam, self.Np, self.C),
+                device=self.device,
+                generator=g_gpu
+            )
+
+            Z = m + sigma * noise
+
+            deltas = project_delta(
+                self.z_to_delta(Z),
+                self.eps,
+                self.norm
+            )
+
+            margins, l2s = self.evaluate_population(deltas)
+            num_eval += self.lam
+
+            idx = torch.argmin(margins)
+            f_best = float(margins[idx])
+            l2_best = float(l2s[idx])
+
+            if f_best < f_m:
+                m = Z[idx:idx+1].clone()
+                f_m = f_best
+                l2_m = l2_best
+                sigma *= self.c_inc
+            else:
+                sigma *= self.c_dec
+
+            history.append((num_eval, f_m))
+
+            if self.is_success(f_m) and success_eval is None:
+                success_eval = num_eval
+                break
+
+            print(
+                f"[Eval {num_eval}] "
+                f"Best margin: {f_m:.6f} | L2: {l2_m:.4f}"
+            )
+
+        return {
+            "best_delta": self.z_to_delta(m).detach(),
+            "best_margin": f_m,
+            "history": history,
+            "success_evaluation": success_eval
+        }
+
+
