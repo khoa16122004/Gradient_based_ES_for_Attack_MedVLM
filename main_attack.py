@@ -199,7 +199,7 @@ def main(args):
             eps=args.epsilon,
             max_evaluation=args.max_evaluation,
             lam=args.lamda,
-            local_steps=args.local_step
+            local_steps=args.local_steps
         )
     
     
