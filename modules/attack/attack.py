@@ -673,7 +673,8 @@ def grid_local_es(
     lam=16,
     steps=10,
     sigma=0.5,
-    device="cuda"
+    device="cuda",
+    start_eval=0   # để align với global evaluation
 ):
     _, C, H, W = base_delta.shape
 
@@ -681,8 +682,14 @@ def grid_local_es(
     best_delta = base_delta.clone()
 
     f_best, _ = evaluator.evaluate_blackbox(best_delta)
+    f_best = float(f_best)
 
-    for _ in range(steps):
+    history = []
+    eval_cnt = start_eval
+
+    print(f"    [LocalES] start | margin = {f_best:.6f}")
+
+    for step in range(steps):
 
         noise = torch.randn((lam, C, H, W), device=device)
         Z = z + sigma * noise
@@ -691,16 +698,30 @@ def grid_local_es(
         deltas = project_delta(deltas, eps, norm)
 
         margins, _ = evaluator.evaluate_blackbox(deltas)
-        idx = torch.argmin(margins)
 
-        if margins[idx] < f_best:
+        eval_cnt += lam
+        idx = torch.argmin(margins)
+        f_step = float(margins[idx])
+
+        if f_step < f_best:
             z = Z[idx:idx+1].clone()
             best_delta = deltas[idx:idx+1].clone()
-            f_best = margins[idx]
+            f_best = f_step
+            status = "ACCEPT"
         else:
             sigma *= 0.7
+            status = "REJECT"
 
-    return best_delta, float(f_best)
+        history.append((eval_cnt, f_best))
+
+        print(
+            f"    [LocalES][{step+1:03d}/{steps}] "
+            f"eval = {eval_cnt:6d} | "
+            f"best = {f_best:.6f} | {status}"
+        )
+
+    return best_delta, f_best, history
+
 
 
 class GridES_1_Lambda(BaseAttack):
@@ -733,20 +754,21 @@ class GridES_1_Lambda(BaseAttack):
 
         delta = torch.zeros_like(self.evaluator.img_tensor)
         f_best, _ = self.evaluator.evaluate_blackbox(delta)
+        f_best = float(f_best)
 
         used_eval = 1
         tried = set()
         round_id = 0
 
+        history = [(used_eval, f_best)]
         success_evaluation = None
 
-        print(f"[GridES] Start | init margin = {float(f_best):.6f}")
+        print(f"[GridES] start | eval = {used_eval} | margin = {f_best:.6f}")
 
         while used_eval < self.max_evaluation:
 
             round_id += 1
 
-            # --- Grid exploration
             if len(tried) == self.Np:
                 tried.clear()
 
@@ -754,6 +776,11 @@ class GridES_1_Lambda(BaseAttack):
                 list(set(range(self.Np)) - tried)
             )
             tried.add(patch_idx)
+
+            print(
+                f"\n[GridES][Round {round_id}] "
+                f"Explore patch {patch_idx} | eval = {used_eval}"
+            )
 
             mask = grid_patch_mask(
                 patch_idx,
@@ -763,7 +790,7 @@ class GridES_1_Lambda(BaseAttack):
                 self.device
             )
 
-            delta_new, f_new = grid_local_es(
+            delta_new, f_new, local_history = grid_local_es(
                 evaluator=self.evaluator,
                 base_delta=delta,
                 mask=mask,
@@ -772,40 +799,38 @@ class GridES_1_Lambda(BaseAttack):
                 lam=self.lam,
                 steps=self.local_steps,
                 sigma=self.sigma,
-                device=self.device
+                device=self.device,
+                start_eval=used_eval
             )
 
-            eval_cost = self.lam * self.local_steps
-            used_eval += eval_cost
+            # merge local history
+            history.extend(local_history)
+            used_eval = history[-1][0]
 
-            improved = f_new < f_best
-
-            if improved:
+            if f_new < f_best:
                 delta = delta_new
                 f_best = f_new
-                tried.clear()   # exploit tiếp
+                tried.clear()
                 status = "IMPROVED"
             else:
                 status = "NO-IMPROVE"
 
-            # --- track success but DO NOT break
             if self.is_success(f_best) and success_evaluation is None:
                 success_evaluation = used_eval
 
-            # --- light logging (giống ES_1_Lambda)
             print(
-                f"[Eval {used_eval:6d}] "
-                f"Patch {patch_idx:3d} | "
-                f"{status:10s} | "
-                f"best margin = {f_best:.6f}"
+                f"[GridES][Round {round_id}] "
+                f"{status} | best margin = {f_best:.6f} | eval = {used_eval}"
             )
 
         return {
             "best_delta": delta.detach(),
             "best_margin": f_best,
+            "history": history,
             "success_evaluation": success_evaluation,
             "num_evaluation": used_eval
         }
+
 
 
 
