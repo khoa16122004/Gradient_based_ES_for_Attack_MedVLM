@@ -138,7 +138,7 @@ def main(args):
     if args.attacker_name == "ES_1_Lambda": # number of evalation = ierations * lambda
         attacker = ES_1_Lambda(
             evaluator=evaluator,
-            pattern="blur",
+            pattern=args.pattern,
             eps=args.epsilon,
             norm=args.norm,
             max_evaluation=args.max_evaluation,

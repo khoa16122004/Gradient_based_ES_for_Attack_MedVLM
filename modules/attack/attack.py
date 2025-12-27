@@ -45,6 +45,9 @@ class ES_1_Lambda(BaseAttack):
         _, C, H, W = self.evaluator.img_tensor.shape
         
         m = torch.randn((1, C, H, W), device=self.device)
+        if self.pattern == 'blur'
+            m = blur(noise, k=11)
+
         delta_m = self.z_to_delta(m)
         delta_m = project_delta(delta_m, self.eps, self.norm)
 
