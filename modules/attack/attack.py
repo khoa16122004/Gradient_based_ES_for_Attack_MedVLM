@@ -599,11 +599,11 @@ def grid_local_es(
         if f_best < 0 and local_success_eval is None:
             local_success_eval = eval_cnt
 
-        print(
-            f"    [LocalES][{step+1:03d}/{steps}] "
-            f"eval = {eval_cnt:6d} | "
-            f"best = {f_best:.6f} | {status}"
-        )
+        # print(
+        #     f"    [LocalES][{step+1:03d}/{steps}] "
+        #     f"eval = {eval_cnt:6d} | "
+        #     f"best = {f_best:.6f} | {status}"
+        # )
 
     return best_delta, f_best, history, local_success_eval
 
