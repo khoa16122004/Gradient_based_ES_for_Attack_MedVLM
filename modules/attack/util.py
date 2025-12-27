@@ -83,7 +83,7 @@ def project_delta(delta: torch.Tensor,
                   eps: float,
                   norm: str = "linf"
                   ) -> torch.Tensor:
-
+    
     delta = clamp_eps(delta, eps, norm)
     return delta
 
