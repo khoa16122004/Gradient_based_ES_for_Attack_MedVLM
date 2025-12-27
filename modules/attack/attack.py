@@ -516,7 +516,15 @@ class NES_Attack(BaseAttack):
         }
 
 
+import torch.nn.functional as F
 
+def blur(x, k=9):
+    kernel = torch.ones(1, 1, k, k, device=x.device) / (k * k)
+    return F.conv2d(
+        x.view(-1, 1, *x.shape[-2:]),
+        kernel,
+        padding=k//2
+    ).view(x.shape)
 
 def grid_patch_mask(patch_idx, patch_size, H, W, device):
     gh = H // patch_size
@@ -560,11 +568,12 @@ def grid_local_es(
 
     local_success_eval = None
 
-    print(f"    [LocalES] start | margin = {f_best:.6f}")
+    # print(f"    [LocalES] start | margin = {f_best:.6f}")
 
     for step in range(steps):
 
         noise = torch.randn((lam, C, H, W), device=device)
+        noise = blur(noise, k=11)
         Z = z + sigma * noise
 
         deltas = base_delta + mask * torch.tanh(Z) * eps
@@ -587,7 +596,6 @@ def grid_local_es(
 
         history.append((eval_cnt, f_best))
 
-        # ⭐ SUCCESS CHECK NGAY TẠI LOCAL
         if f_best < 0 and local_success_eval is None:
             local_success_eval = eval_cnt
 
