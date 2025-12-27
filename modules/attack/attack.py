@@ -29,7 +29,7 @@ class BaseAttack:
         return self.eps * s
 
 class ES_1_Lambda(BaseAttack):
-    def __init__(self, evaluator, eps=8/255, norm="linf",
+    def __init__(self, evaluator, pattern, eps=8/255, norm="linf",
                  max_evaluation=10000, lam=64, c_inc=1.5, c_dec=0.9, device='cuda'):
         super().__init__(evaluator, eps, norm, device)
         # assert lam >= 2 and c_inc > 1.0 and 0.0 < c_dec < 1.0
@@ -38,6 +38,7 @@ class ES_1_Lambda(BaseAttack):
         self.c_dec = float(c_dec)
         self.sigma = 1.1  # σ tuyệt đối
         self.max_evaluation = max_evaluation
+        self.pattern = pattern
 
     def run(self) -> Dict[str, Any]:
         sigma = self.sigma
@@ -54,7 +55,9 @@ class ES_1_Lambda(BaseAttack):
         while num_evaluation < self.max_evaluation:
             # noise = torch.randn((self.lam, C, H, W), device=self.device)
             noise = torch.randn((self.lam, C, H, W), device=self.device, generator=g_gpu)
-            noise = blur(noise, k=11)
+            if self.pattern == "blur":
+                noise = blur(noise, k=11)
+                
             X = m + sigma * noise
             X_delta = self.z_to_delta(X)
             X_delta = project_delta(X_delta, self.eps, self.norm)

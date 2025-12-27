@@ -138,10 +138,11 @@ def main(args):
     if args.attacker_name == "ES_1_Lambda": # number of evalation = ierations * lambda
         attacker = ES_1_Lambda(
             evaluator=evaluator,
+            pattern="blur",
             eps=args.epsilon,
             norm=args.norm,
             max_evaluation=args.max_evaluation,
-            lam=args.lamda
+            lam=args.lamda,
         )
     elif args.attacker_name == "PGD":
         attacker = PGDAttack(
@@ -315,6 +316,7 @@ def get_args():
     parser.add_argument("--mode", type=str,)
     parser.add_argument("--patch_size", type=int)
     parser.add_argument("--local_steps", type=int)
+    parser.add_argument("--pattern", type=str, default='')
     # NES
     parser.add_argument("--alpha", type=float, default=0.01)
     parser.add_argument("--batch_q", type=int)
