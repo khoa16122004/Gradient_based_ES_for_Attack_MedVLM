@@ -523,6 +523,7 @@ class NES_Attack(BaseAttack):
             "best_margin": f_m,
             "history": history,
             "success_evaluation": success_evaluation,
+            'l2': l2
         }
 
 
