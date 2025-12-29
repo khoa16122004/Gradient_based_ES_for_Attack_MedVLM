@@ -1,5 +1,5 @@
 from modules.dataset.factory import DatasetFactory
-from modules.utils.constants import MODEL_TRANSFORMS, DEFAULT_TEMPLATES, RSNA_CLASS_PROMPTS, RSNA_CLASS_PROMPTS, SIZE_TRANSFORM, DATA_ROOT
+from modules.utils.constants import MODEL_TRANSFORMS, DEFAULT_TEMPLATES, RSNA_CLASS_PROMPTS, RSNA_CLASS_PROMPTS, SIZE_TRANSFORM, DATA_ROOT, ENTREP_CLASS_PROMPTS
 from modules.models.factory import ModelFactory
 from tqdm import tqdm
 import numpy as np
@@ -35,7 +35,10 @@ def main(args):
 
 
    # ========= class_prompt_based ========= #
-    class_prompts = RSNA_CLASS_PROMPTS
+    if args.model_name in ['medclip', 'biomedclip', 'ViT-B-32', 'ViT-B-16', "ViT-L-14"]:
+        class_prompts = RSNA_CLASS_PROMPTS
+    elif args.model_name == "entrep":
+        class_prompts = ENTREP_CLASS_PROMPTS    
     num_classes = len(class_prompts)
 
     # ========= class_prompt_based ========= #
