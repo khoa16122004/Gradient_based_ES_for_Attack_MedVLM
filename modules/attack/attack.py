@@ -85,6 +85,7 @@ class ES_1_Lambda(BaseAttack):
             history.append((num_evaluation, float(f_m)))
             if self.is_success(f_m) and success_evaluation is None:
                 success_evaluation = num_evaluation
+                break
 
             
         return {"best_delta": delta_m, "best_margin": f_m, "history": history, "success_evaluation": success_evaluation}
@@ -515,7 +516,7 @@ class NES_Attack(BaseAttack):
 
             if self.is_success(f_m) and success_evaluation is None:
                 success_evaluation = num_evaluation
-                # break
+                break
 
         return {
             "best_delta": delta.detach(),
