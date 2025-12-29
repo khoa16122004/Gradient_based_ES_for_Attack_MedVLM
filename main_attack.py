@@ -287,8 +287,8 @@ def main(args):
             for (n_eval, score) in result['history']:
                 f.write(f"{str(n_eval)},{str(score)}\n") 
         
-        with open(os.path.join(index_dir, "adv_img.pkl"), "wb") as f:
-            pkl.dump(adv_imgs.cpu(), f)
+        # with open(os.path.join(index_dir, "adv_img.pkl"), "wb") as f:
+        #     pkl.dump(adv_imgs.cpu(), f)
             
             
         
