@@ -79,8 +79,8 @@ class RSNADataset(BaseClassificationDataset):
                 logger.error("gdown not installed. Please install with: pip install gdown")
                 return False
                 
-            # url_id = "1r2mIaytuvHQc5D77BAuIfkLeW9jGXjed"
-            url_id = "1QgTKzomgbmwFtR16yw9yW29qdCgh1Fuk"
+            url_id = "1r2mIaytuvHQc5D77BAuIfkLeW9jGXjed"
+            # url_id = "1QgTKzomgbmwFtR16yw9yW29qdCgh1Fuk"
             rsna_output = os.path.join(self.data_root, "rsna_pneumonia_detection.zip")
             logger.info("Downloading RSNA dataset from Google Drive...")
             
