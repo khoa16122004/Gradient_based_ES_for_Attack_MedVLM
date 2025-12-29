@@ -23,7 +23,7 @@ def main(args):
     # ========= Dataset ========= #
     dataset = DatasetFactory.create_dataset(
         dataset_name=args.dataset_name,
-        model_type='medclip',
+        model_type=args.model_name,
         data_root=DATA_ROOT,
         transform=None
     )
@@ -47,7 +47,23 @@ def main(args):
         model = ModelFactory.create_model(
             model_type=args.model_name,
             variant='base',
-            pretrained=True
+            pretrained=True,
+            mode_pretrained=args.mode_pretrained
+        )
+
+    elif args.model_name == 'entrep':
+        config_path = "configs/entrep_contrastive.yaml"
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+        model_config = config.get('model', {})
+        model = ModelFactory.create_model(
+            model_type="entrep",
+            variant='base',
+            checkpoint=None,
+            pretrained=False,
+            **{k: v for k, v in model_config.items() if k != 'model_type' and k != "pretrained" and k != "checkpoint"},
+            mode_pretrained=args.mode_pretrained
+            )            
         )
     elif args.model_name in ['ViT-B-32', 'ViT-B-16', 'ViT-L-14']:
         model = ModelFactory.create_model(
@@ -115,13 +131,13 @@ def main(args):
     # path dir save
     if args.attacker_name == "ES_1_Lambda":
         # ko có lkambda mặt định là 50
-        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_pattern={args.pattern}_lamda={args.lamda}_norm={args.norm}_seed={args.seed}")
+        save_dir = os.path.join(args.out_dir, args.model_name, args.mode_pretrained, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_pattern={args.pattern}_lamda={args.lamda}_norm={args.norm}_seed={args.seed}")
     elif args.attacker_name == "NES":
-        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_q={args.q}_alpha={args.alpha}_norm={args.norm}_seed={args.seed}")
+        save_dir = os.path.join(args.out_dir, args.model_name, args.mode_pretrained, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_q={args.q}_alpha={args.alpha}_norm={args.norm}_seed={args.seed}")
 
     
     elif args.attacker_name == "PGD":
-        save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_steps={args.PGD_steps}_alpha={args.alpha}_norm={args.norm}_seed={args.seed}")
+        save_dir = os.path.join(args.out_dir, args.model_name, args.mode_pretrained, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_steps={args.PGD_steps}_alpha={args.alpha}_norm={args.norm}_seed={args.seed}")
     elif args.attacker_name == "ES_1_Lambda_Gradient":
         save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_theta={args.theta}_lamda={args.lamda}_norm={args.norm}_seed={args.seed}")
     elif args.attacker_name == "CEM":
@@ -317,6 +333,7 @@ def get_args():
     parser.add_argument("--patch_size", type=int)
     parser.add_argument("--local_steps", type=int)
     parser.add_argument("--pattern", type=str, default='')
+    parser.add_argument("--mode_pretrained", type=str, default='scratch')
     # NES
     parser.add_argument("--alpha", type=float, default=0.01)
     parser.add_argument("--batch_q", type=int)

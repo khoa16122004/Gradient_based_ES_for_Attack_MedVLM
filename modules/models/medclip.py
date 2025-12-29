@@ -134,6 +134,7 @@ class MedCLIPModel(VisionLanguageModel):
         vision_pretrained=None,  # New parameter for pretrained vision weights
         text_pretrained=None,     # New parameter for pretrained text weights
         logit_scale_init_value=0.07,
+        mode_pretrained='scratch',
         **kwargs
         ) -> None:
         super().__init__()
@@ -156,19 +157,27 @@ class MedCLIPModel(VisionLanguageModel):
         # learnable temperature for contrastive loss
         self.logit_scale = nn.Parameter(torch.log(torch.tensor(1/logit_scale_init_value)))
 
+        self.mode_pretrained = mode_pretrained
         # Load full model checkpoint if provided
         if checkpoint is not None:
             self.load_checkpoint(checkpoint)
         else:
             repo_id = "Woffy/Thesis_Pretrained_Medical_Moddel"
-            file_name = "medclip.pt"
+            if self.mode_pretrained == "scratch":    
+                file_name = "medclip.pt"
+            elif self.mode_pretrained == "ssl":
+                file_name = "medclip_ssl_finetuning.pth"
             local_path = hf_hub_download(
                 repo_id=repo_id,
                 filename=file_name,
                 local_dir=".",          # lưu ngay thư mục hiện tại
                 local_dir_use_symlinks=False  # QUAN TRỌNG: copy file thật, không tạo symlink
             )   
-            model_state_dict = torch.load(local_path)['model_state_dict']
+            ckpt = torch.load(local_path)
+            if isinstance(ckpt, dict) and "model_state_dict" in ckpt:
+                model_state_dict = ckpt["model_state_dict"]
+            else:
+                model_state_dict = ckpt     
             # model_state_dict = self._strip_prefix_from_state_dict(model_state_dict, 'model.')
 
             incompatible_keys = self.load_state_dict(model_state_dict, strict=True)

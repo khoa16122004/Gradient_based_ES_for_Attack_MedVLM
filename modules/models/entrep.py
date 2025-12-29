@@ -427,18 +427,20 @@ class ENTRepModel(nn.Module):
     
     def __init__(self,
                  vision_encoder_type: str = 'dinov2',
-        text_encoder_type: str = 'clip',
+                 text_encoder_type: str = 'clip',
                  text_checkpoint: Optional[str] = None,
                  model_name: str = 'dinov2_vitb14',
-        feature_dim: int = 768,
+                 feature_dim: int = 768,
                  num_classes: int = 7,
                  dropout: float = 0.1,
-        dropout_rate: float = 0.3,
-        freeze_backbone: bool = False,
-        vision_checkpoint: Optional[str] = None,
+                 dropout_rate: float = 0.3,
+                 freeze_backbone: bool = False,
+                 vision_checkpoint: Optional[str] = None,
                  checkpoint: Optional[str] = None,
-        logit_scale_init_value: float = 0.07,
-                 pretrained: bool = True):
+                 logit_scale_init_value: float = 0.07,
+                 pretrained: bool = True,
+                 mode_pretrained: str = "scratch"
+        ):
         """
         Initialize ENTRep Model
         
@@ -472,6 +474,7 @@ class ENTRepModel(nn.Module):
         self.preprocess = constants.MODEL_TRANSFORMS['entrep']
         self.tokenizer = AutoTokenizer.from_pretrained("openai/clip-vit-base-patch32")
         self.normalize_transform = constants.TENSOR_NORMALIZE_TRANSFORM['entrep']
+        self.mode_pretrained = mode_pretrained
         # Create text encoder (optional)
         # Không load text_checkpoint nếu có checkpoint (sẽ load sau)
         if text_encoder_type == 'clip':
@@ -497,124 +500,29 @@ class ENTRepModel(nn.Module):
                 dropout=dropout,
                 freeze_backbone=freeze_backbone
             )
-            
-            # Load vision checkpoint riêng (chỉ khi KHÔNG có checkpoint)
-        #     if vision_checkpoint is not None and checkpoint is None:
-        #         logger.info(f"📥 Loading vision checkpoint: {vision_checkpoint}")
-        #         checkpoint = torch.load(vision_checkpoint)
-        #         state_dict = checkpoint["model_state_dict"]
-                
-        #         # Filter ra classifier keys để tránh size mismatch
-        #         filtered_state_dict = {}
-        #         skipped_keys = []
-        #         for key, value in state_dict.items():
-        #             if 'classifier' in key:
-        #                 skipped_keys.append(key)
-        #                 logger.debug(f"   Skipping {key} (classifier will be re-initialized)")
-        #             else:
-        #                 filtered_state_dict[key] = value
-                
-        #         logger.info(f"   Loading {len(filtered_state_dict)} keys, skipping {len(skipped_keys)} classifier keys")
-                
-        #         missing_keys, unexpected_keys = self.vision_model.load_state_dict(
-        #             filtered_state_dict,
-        #             strict=False
-        #         )
-                
-        #         if missing_keys:
-        #             logger.info(f"✅ Missing keys (expected - classifier): {len(missing_keys)}")
-        #         if unexpected_keys:
-        #             logger.warning(f"⚠️ Unexpected keys: {len(unexpected_keys)}")
-                
-        #         logger.info("✅ Vision checkpoint loaded! Backbone + feature_projection loaded, classifier re-initialized.")
-                
-        # elif vision_encoder_type == 'endovit':
-        #     logger.info(f"🏗️ Creating EntVitModel wrapper...")
-        #     self.vision_model = EntVitModel(
-        #         model_name=model_name if model_name else 'egeozsoy/EndoViT',
-        #         feature_dim=feature_dim,
-        #         num_classes=num_classes,
-        #         dropout=dropout,
-        #         freeze_backbone=freeze_backbone
-        #     )
-            
-        #     # Load vision checkpoint riêng (chỉ khi KHÔNG có checkpoint)
-        #     if vision_checkpoint is not None and checkpoint is None:
-        #         logger.info(f"📥 Loading vision checkpoint: {vision_checkpoint}")
-        #         checkpoint = torch.load(vision_checkpoint, map_location='cpu')
-        #         state_dict = checkpoint["model_state_dict"]
-                
-        #         # Filter ra classifier keys để tránh size mismatch
-        #         filtered_state_dict = {}
-        #         skipped_keys = []
-        #         for key, value in state_dict.items():
-        #             if 'classifier' in key:
-        #                 skipped_keys.append(key)
-        #                 logger.debug(f"   Skipping {key} (classifier will be re-initialized)")
-        #             else:
-        #                 filtered_state_dict[key] = value
-                
-        #         logger.info(f"   Loading {len(filtered_state_dict)} keys, skipping {len(skipped_keys)} classifier keys")
-                
-        #         missing_keys, unexpected_keys = self.vision_model.load_state_dict(
-        #             filtered_state_dict,
-        #             strict=False
-        #         )
-                
-        #         if missing_keys:
-        #             logger.info(f"✅ Missing keys (expected - classifier): {len(missing_keys)}")
-        #         if unexpected_keys:
-        #             logger.warning(f"⚠️ Unexpected keys: {len(unexpected_keys)}")
-                
-        #         logger.info("✅ Vision checkpoint loaded! Backbone + feature_projection loaded, classifier re-initialized.")
-        # else:
-        #     raise ValueError(f"Unknown vision encoder type: {vision_encoder_type}")
-        
-        # Logit scale parameter for contrastive learning
         self.logit_scale = nn.Parameter(torch.log(torch.tensor(1/logit_scale_init_value)))
         
-        if pretrained:
-            if checkpoint:
-                self._load_full_checkpoint(checkpoint)
-            else:
-                logger.info("⚠️  pretrained=True but no checkpoint provided, downloading default checkpoint...")
-                ckp = self.download_checkpoint()
-                self._load_full_checkpoint(ckp)
-        else:
-            logger.info("✅ Training from scratch (pretrained=False), skipping checkpoint loading")
-            logger.info("   All weights are randomly initialized")
+      
+        ckp = self.download_checkpoint()
+        print(ckp)
+        self._load_full_checkpoint(ckp)
             
-        logger.info(f"✅ ENTRepModel created with {vision_encoder_type} vision encoder")
-        if self.text_model:
-            logger.info(f"✅ Text encoder: {text_encoder_type}")
             
     def download_checkpoint(self):
-        import gdown
-        import os
-        import zipfile
-        if gdown is None:
-                logger.error("gdown not installed. Please install with: pip install gdown")
-                return None
-        # url_id = "1QbOWc4_MU2tiiFLsuTAeyTYF40_X8Hz2"
-        url_id = "1QbOWc4_MU2tiiFLsuTAeyTYF40_X8Hz2"
-        os.makedirs('checkpoints', exist_ok=True)
-        entrep_output = os.path.join("checkpoints", "entrep_checkpoint.pt")
-        # entrep_output = "checkpoints/check"
-        logger.info("Downloading ENTREP checkpoint from Google Drive...")
         try:
-            # gdown.download(id=url_id, output=entrep_output, quiet=False)
-
-            hf_hub_download(
-                    repo_id="Woffy/ENTREP_CLIP",  # sửa repo của bạn
-                    filename="entrep_checkpoint.pt",
-                    local_dir="checkpoints",                 # tải đúng vào thư mục bạn muốn
-                    force_download=False,                    # không tải lại nếu đã có sẵn
-                )
-            # with zipfile.ZipFile(entrep_output, 'r') as zip_ref:
-            #     zip_ref.extractall(self.data_root)
-                
-            # os.remove(entrep_output)    
-            return entrep_output
+            repo_id = "Woffy/Thesis_Pretrained_Medical_Moddel"
+            if self.mode_pretrained == "scratch":
+                file_name = "entrep.pt"
+            elif self.mode_pretrained == "ssl":
+                file_name = "entrep_ssl_finetuning.pt"
+            print(file_name)
+            local_path = hf_hub_download(
+                    repo_id=repo_id,  # sửa repo của bạn
+                    filename=file_name,
+                    local_dir=".",                 # tải đúng vào thư mục bạn muốn
+                    local_dir_use_symlinks=False  # QUAN TRỌNG: copy file thật, không tạo symlink
+                )   
+            return local_path
         except Exception as e:
             logger.error(f"Failed to download ENTREP checkpoint: {e}")
             return None

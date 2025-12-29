@@ -179,7 +179,7 @@ class ModelFactory:
         return config
     
     @classmethod
-    def _instantiate_model(cls, model_type: str, model_class, config: Dict[str, Any]) -> BaseVisionLanguageModel:
+    def _instantiate_model(cls, model_type: str, model_class, config: Dict[str, Any], mode_pretrained: str) -> BaseVisionLanguageModel:
         """
         Instantiate model based on type and configuration
         
@@ -195,7 +195,7 @@ class ModelFactory:
         
         try:
 
-            model = model_class(**config)
+            model = model_class(**config, mode_pretrained=mode_pretrained)
             logger.info(f"✅ {model_type} model created successfully")
             return model
         except Exception as e:
@@ -249,6 +249,7 @@ class ModelFactory:
         variant: str = 'base',
         checkpoint: Optional[str] = None,
         pretrained: bool = True,
+        mode_pretrained: str = "scratch",
         device: Optional[str] = None,
         **kwargs
     ) -> BaseVisionLanguageModel:
@@ -299,10 +300,10 @@ class ModelFactory:
                 config['pretrained'] = pretrained
             
             # 4. Instantiate model
-            model = cls._instantiate_model(model_type, model_class, config)
+            model = cls._instantiate_model(model_type, model_class, config, mode_pretrained)
             
             # 5. Load pretrained weights
-            cls._load_pretrained_weights(model, model_type, checkpoint, pretrained)
+            # cls._load_pretrained_weights(model, model_type, checkpoint, pretrained)
             
             # 6. Move to device
             if device is None:

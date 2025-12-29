@@ -24,7 +24,8 @@ class BioMedCLIPModel(VisionLanguageModel):
         model_name: str = 'hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224',
         vision_pretrained = None,
         context_length: int = 256,
-        checkpoint=None
+        checkpoint=None,
+        mode_pretrained='scratch',
     ):
         """
         Initialize BioMedCLIP model.
@@ -42,20 +43,30 @@ class BioMedCLIPModel(VisionLanguageModel):
         self.tokenizer = open_clip.get_tokenizer(model_name)
         self.context_length = context_length
         self.normalize_transform = constants.TENSOR_NORMALIZE_TRANSFORM['biomedclip']
-        
+        self.mode_pretrained = mode_pretrained
         # raise
         if checkpoint is not None:
             self.load_checkpoint(checkpoint)
         else:
             repo_id = "Woffy/Thesis_Pretrained_Medical_Moddel"
-            file_name = "biomedclip.pth"
+            if self.mode_pretrained == "scratch":
+                file_name = "biomedclip.pth"
+            elif self.mode_pretrained == "ssl":
+                file_name = "biomedclip_ssl_finetuning.pth"
             local_path = hf_hub_download(
                 repo_id=repo_id,
                 filename=file_name,
                 local_dir=".",          # lưu ngay thư mục hiện tại
                 local_dir_use_symlinks=False  # QUAN TRỌNG: copy file thật, không tạo symlink
             )   
-            model_state_dict = torch.load(local_path)['model_state_dict']
+
+            ckpt = torch.load(local_path)
+            if isinstance(ckpt, dict) and "model_state_dict" in ckpt:
+                model_state_dict = ckpt["model_state_dict"]
+            else:
+                model_state_dict = ckpt  
+
+            # model_state_dict = torch.load(local_path)['model_state_dict']
             model_state_dict = self._strip_prefix_from_state_dict(model_state_dict, 'model.')
 
             incompatible_keys = self.model.load_state_dict(model_state_dict, strict=True)
