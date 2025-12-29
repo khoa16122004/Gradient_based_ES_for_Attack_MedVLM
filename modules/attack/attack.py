@@ -516,7 +516,7 @@ class NES_Attack(BaseAttack):
 
             if self.is_success(f_m) and success_evaluation is None:
                 success_evaluation = num_evaluation
-                break
+                # break
 
         return {
             "best_delta": delta.detach(),
