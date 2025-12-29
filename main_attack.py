@@ -277,7 +277,8 @@ def main(args):
             'clean_pred': clean_preds,
             'adv_pred': adv_preds,
             'gt': label_id,
-            'success_evaluation': result['success_evaluation']
+            'success_evaluation': result['success_evaluation'],
+            'l2': result['l2']
         }
         with open(os.path.join(index_dir, "info.json"), "w") as f:
             json.dump(info, f, indent=4)
