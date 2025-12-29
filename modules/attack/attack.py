@@ -503,7 +503,7 @@ class NES_Attack(BaseAttack):
             grad = grad / (2 * self.sigma * used_q)
 
             # update
-            delta = delta - self.alpha * grad.sign()
+            delta = delta - self.alpha * grad
             delta = project_delta(delta, self.eps, self.norm)
             margin, l2 = self.evaluator.evaluate_blackbox(delta)
             f_m = float(margin.item())
