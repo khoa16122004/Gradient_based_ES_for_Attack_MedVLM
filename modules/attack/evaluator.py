@@ -66,7 +66,7 @@ class EvaluatePerturbation:
         mask = torch.ones_like(sims, dtype=bool)
         mask[:, self.clean_pred_id] = False
         other_max_sim = sims[mask].view(sims.size(0), -1).max(dim=1, keepdim=True).values  # (B, 1)
-        margin = correct_sim - other_max_sim + 0.2
+        margin = correct_sim - other_max_sim + 0.1
 
         if self.target_image_feat is not None:
             target_sim = adv_feats @ self.target_image_feat.T
@@ -76,7 +76,6 @@ class EvaluatePerturbation:
             target_sim = adv_feats @ self.target_text_feat.T
             margin = margin - target_sim
 
-        # margin = correct_sim - other_max_sim + 0.05
 
         l2 = self.cal_l2(perturbations_)
         return margin, l2
@@ -100,8 +99,7 @@ class EvaluatePerturbation:
         mask = torch.ones_like(sims, dtype=bool)
         mask[:, self.clean_pred_id] = False
         other_max_sim = sims[mask].view(sims.size(0), -1).max(dim=1, keepdim=True).values  # (B, 1)
-        margin = correct_sim - other_max_sim + 1
-        # margin = correct_sim - other_max_sim + 0.05
+        margin = correct_sim - other_max_sim 
 
         
         # l2
