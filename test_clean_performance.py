@@ -15,8 +15,38 @@ import yaml
 import pandas as pd
 from PIL import Image
 import argparse
+import torch.nn as nn
 
 _toTensor = transforms.ToTensor()
+
+
+class Denoiser(nn.Module):
+    def __init__(self, channels=3, num_of_layers=17):
+        super().__init__()
+        kernel_size = 3
+        padding = 1
+        features = 64
+
+        layers = [
+            nn.Conv2d(channels, features, kernel_size, padding=padding, bias=False),
+            nn.ReLU(inplace=True)
+        ]
+
+        for _ in range(num_of_layers - 2):
+            layers += [
+                nn.Conv2d(features, features, kernel_size, padding=padding, bias=False),
+                nn.BatchNorm2d(features),
+                nn.ReLU(inplace=True)
+            ]
+
+        layers.append(
+            nn.Conv2d(features, channels, kernel_size, padding=padding, bias=False)
+        )
+
+        self.net = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.net(x)  
 
 def main(args):
     # ========= Dataset ========= #
@@ -26,6 +56,14 @@ def main(args):
         data_root=DATA_ROOT,
         transform=None
     )
+
+    denoiser = Denoiser().cuda()
+
+    ckpt = torch.load(args.pretrained_denoiser, map_location="cuda")
+    state_dict = ckpt["model_state_dict"] if isinstance(ckpt, dict) and "model_state_dict" in ckpt else ckpt
+
+    print(denoiser.load_state_dict(state_dict, strict=False))
+    
 
     # ========= class_prompt_based ========= #
     class_prompts = RSNA_CLASS_PROMPTS
@@ -82,7 +120,13 @@ def main(args):
             ids_batch.append(j)
 
         images_batch = torch.stack(images_batch).cuda()
+        if args.pretrained_denoiser:
+            noises = torch.randn_like(images_batch).cuda()
+            images_batch = (images_batch + args.epsilon * noises).clamp(0, 1)
+            images_batch = denoiser(images_batch)
         labels_batch = torch.tensor(labels_batch).cuda()
+
+
 
         with torch.no_grad():
             image_feats = model.encode_pretransform_image(images_batch)
@@ -122,11 +166,11 @@ def main(args):
         else:
             print(f"Class {c}: No samples")
 
-    # ========= Write JSON ========= #
-    with open(json_path, "w") as f:
-        json.dump(correct_samples, f, indent=4)
+    # # ========= Write JSON ========= #
+    # with open(json_path, "w") as f:
+    #     json.dump(correct_samples, f, indent=4)
 
-    print(f"\nSaved correct samples to {json_path}")
+    # print(f"\nSaved correct samples to {json_path}")
 
 
 def get_args():
@@ -134,6 +178,9 @@ def get_args():
     parser.add_argument("--dataset_name", type=str, required=True)
     parser.add_argument("--model_name", type=str, required=True)
     parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument("--pretrained_denoiser", type=str, default=None)
+    parser.add_argument("--epsilon", type=float, default=0.03)
+
     return parser.parse_args()
 
 
