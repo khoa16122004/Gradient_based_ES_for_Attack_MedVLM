@@ -74,7 +74,8 @@ def main(args):
         model = ModelFactory.create_model(
             model_type=args.model_name,
             variant='base',
-            pretrained=True
+            pretrained=True,
+            mode_pretrained='scratch'
         )
     elif args.model_name in ['ViT-B-32', 'ViT-B-16', 'ViT-L-14']:
         model = ModelFactory.create_model(
