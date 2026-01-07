@@ -1,5 +1,5 @@
 from modules.dataset.factory import DatasetFactory
-from modules.utils.constants import MODEL_TRANSFORMS, DEFAULT_TEMPLATES, RSNA_CLASS_PROMPTS, RSNA_CLASS_PROMPTS, SIZE_TRANSFORM, DATA_ROOT
+from modules.utils.constants import MODEL_TRANSFORMS, DEFAULT_TEMPLATES, RSNA_CLASS_PROMPTS, RSNA_CLASS_PROMPTS, SIZE_TRANSFORM, DATA_ROOT, ENTREP_CLASS_PROMPTS
 from modules.models.factory import ModelFactory
 from modules.utils.helpers import setup_seed, _extract_label, load_open_clip_model
 from tqdm import tqdm
@@ -66,7 +66,11 @@ def main(args):
     
 
     # ========= class_prompt_based ========= #
-    class_prompts = RSNA_CLASS_PROMPTS
+    if args.model_name == "rsna":
+        class_prompts = RSNA_CLASS_PROMPTS
+
+    if args.model_name == "entrep":
+        class_prompts = ENTREP_CLASS_PROMPTS
     num_classes = len(class_prompts)
 
     # ========= Model ========= #
@@ -77,6 +81,21 @@ def main(args):
             pretrained=True,
             mode_pretrained='scratch'
         )
+
+    elif args.model_name == "entrep":
+        config_path = "configs/entrep_contrastive.yaml"
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+        model_config = config.get('model', {})
+        model = ModelFactory.create_model(
+            model_type="entrep",
+            variant='base',
+            checkpoint=None,
+            pretrained=False,
+            **{k: v for k, v in model_config.items() if k != 'model_type' and k != "pretrained" and k != "checkpoint"},
+            mode_pretrained=args.mode_pretrained
+            )            
+
     elif args.model_name in ['ViT-B-32', 'ViT-B-16', 'ViT-L-14']:
         model = ModelFactory.create_model(
             model_type='ViT',
