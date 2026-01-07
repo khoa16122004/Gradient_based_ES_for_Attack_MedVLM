@@ -93,7 +93,7 @@ def main(args):
             checkpoint=None,
             pretrained=False,
             **{k: v for k, v in model_config.items() if k != 'model_type' and k != "pretrained" and k != "checkpoint"},
-            mode_pretrained=args.mode_pretrained
+            mode_pretrained='scratch'
             )            
 
     elif args.model_name in ['ViT-B-32', 'ViT-B-16', 'ViT-L-14']:
