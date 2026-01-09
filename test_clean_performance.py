@@ -66,7 +66,7 @@ def main(args):
     
 
     # ========= class_prompt_based ========= #
-    if args.class_name == "rsna":
+    if args.dataset_name == "rsna":
         class_prompts = RSNA_CLASS_PROMPTS
 
     if args.model_name == "entrep":
