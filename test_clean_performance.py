@@ -79,7 +79,7 @@ def main(args):
             model_type=args.model_name,
             variant='base',
             pretrained=True,
-            mode_pretrained='scratch'
+            mode_pretrained=args.mode_pretrained
         )
 
     elif args.model_name == "entrep":
@@ -93,7 +93,7 @@ def main(args):
             checkpoint=None,
             pretrained=False,
             **{k: v for k, v in model_config.items() if k != 'model_type' and k != "pretrained" and k != "checkpoint"},
-            mode_pretrained='scratch'
+            mode_pretrained=args.mode_pretrained
             )            
 
     elif args.model_name in ['ViT-B-32', 'ViT-B-16', 'ViT-L-14']:
@@ -199,6 +199,7 @@ def get_args():
     parser.add_argument("--model_name", type=str, required=True)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument("--pretrained_denoiser", type=str, default=None)
+    parser.add_argument("--mode_pretrained", type=str, default="scratch")
     parser.add_argument("--epsilon", type=float, default=0.03)
 
     return parser.parse_args()
