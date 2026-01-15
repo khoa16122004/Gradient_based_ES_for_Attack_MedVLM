@@ -57,12 +57,14 @@ def main(args):
         transform=None
     )
 
-    denoiser = Denoiser().cuda()
+    if args.pretrained_denoiser:
 
-    ckpt = torch.load(args.pretrained_denoiser, map_location="cuda")
-    state_dict = ckpt["model_state_dict"] if isinstance(ckpt, dict) and "model_state_dict" in ckpt else ckpt
+        denoiser = Denoiser().cuda()
+        
+        ckpt = torch.load(args.pretrained_denoiser, map_location="cuda")
+        state_dict = ckpt["model_state_dict"] if isinstance(ckpt, dict) and "model_state_dict" in ckpt else ckpt
 
-    print(denoiser.load_state_dict(state_dict, strict=False))
+        print(denoiser.load_state_dict(state_dict, strict=False))
     
 
     # ========= class_prompt_based ========= #
