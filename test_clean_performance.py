@@ -121,7 +121,6 @@ def main(args):
 
     # ========= Prepare output folder ========= #
     os.makedirs("evaluate_result", exist_ok=True)
-    json_path = f"evaluate_result/{args.model_name}.json"
 
     # ========= Evaluation loop ========= #
     for i in tqdm(range(0, len(dataset), args.batch_size)):
@@ -186,11 +185,11 @@ def main(args):
         else:
             print(f"Class {c}: No samples")
 
-    # # ========= Write JSON ========= #
-    # with open(json_path, "w") as f:
-    #     json.dump(correct_samples, f, indent=4)
+    # ========= Write JSON ========= #
+    with open(args.json_path, "w") as f:
+        json.dump(correct_samples, f, indent=4)
 
-    # print(f"\nSaved correct samples to {json_path}")
+    print(f"\nSaved correct samples to {args.json_path}")
 
 
 def get_args():
@@ -201,6 +200,7 @@ def get_args():
     parser.add_argument("--pretrained_denoiser", type=str, default=None)
     parser.add_argument("--mode_pretrained", type=str, default="scratch")
     parser.add_argument("--epsilon", type=float, default=0.03)
+    parser.add_argument("--json_path", type=str, required=True)
 
     return parser.parse_args()
 
