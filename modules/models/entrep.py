@@ -515,6 +515,9 @@ class ENTRepModel(nn.Module):
                 file_name = "entrep.pt"
             elif self.mode_pretrained == "ssl":
                 file_name = "entrep_ssl_finetuning.pt"
+            elif self.mode_pretrained == "at":
+                file_name = "entrep_AT.pth"
+            
             print(file_name)
             local_path = hf_hub_download(
                     repo_id=repo_id,  # sửa repo của bạn

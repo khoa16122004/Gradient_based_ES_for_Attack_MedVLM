@@ -167,6 +167,9 @@ class MedCLIPModel(VisionLanguageModel):
                 file_name = "medclip.pt"
             elif self.mode_pretrained == "ssl":
                 file_name = "medclip_ssl_finetuning.pth"
+            elif self.mode_pretrained == "at":
+                file_name = "medclip_AT.pth"
+
             local_path = hf_hub_download(
                 repo_id=repo_id,
                 filename=file_name,
