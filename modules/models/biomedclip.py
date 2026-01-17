@@ -53,6 +53,9 @@ class BioMedCLIPModel(VisionLanguageModel):
                 file_name = "biomedclip.pth"
             elif self.mode_pretrained == "ssl":
                 file_name = "biomedclip_ssl_finetuning.pth"
+            elif self.mode_pretrained == "at":
+                file_name = "biomedclip_AT.pth"
+                
             local_path = hf_hub_download(
                 repo_id=repo_id,
                 filename=file_name,
