@@ -15,3 +15,8 @@ local_model/*
 checkpoints/*
 attack_tanh_transform/*
 attack_results
+rerun
+lucan_run
+l2_run
+icml_run
+icml_full
