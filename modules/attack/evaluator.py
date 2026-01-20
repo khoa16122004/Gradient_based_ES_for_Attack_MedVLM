@@ -66,8 +66,8 @@ class EvaluatePerturbation:
         mask = torch.ones_like(sims, dtype=bool)
         mask[:, self.clean_pred_id] = False
         other_max_sim = sims[mask].view(sims.size(0), -1).max(dim=1, keepdim=True).values  # (B, 1)
-        # margin = correct_sim - other_max_sim
-        margin = correct_sim - other_max_sim + 0.15
+        margin = correct_sim - other_max_sim
+        # margin = correct_sim - other_max_sim + 0.2
 
         if self.target_image_feat is not None:
             target_sim = adv_feats @ self.target_image_feat.T
