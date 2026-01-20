@@ -1,0 +1,80 @@
+# ENTRep Contrastive Learning Configuration
+
+# Model configuration
+model:
+  model_type: 'entrep'
+  text_encoder_type: 'clip'
+  vision_encoder_type: 'dinov2'
+  # vision_encoder_type: 'endovit'
+  model_name: 'dinov2_vitl14'  
+  # model_name: 'egeozsoy/EndoViT'  
+  feature_dim: 768 
+  dropout: 0.1
+  dropout_rate: 0.3
+  num_classes: 4
+  freeze_backbone: false
+  
+  # ============================================
+  # Checkpoint options (ưu tiên từ cao xuống thấp):
+  # ============================================
+  
+  # Option 1 (HIGHEST PRIORITY): Full ENTRep checkpoint (vision + text + logit_scale)
+  # Dùng khi resume training hoặc fine-tune toàn bộ model đã train
+  # entrep_checkpoint: '/datastore/elo/khoatn/Vision-language-Models-in-Medical-Image-Analysis/checkpoints/entrep_20251028_172424/checkpoint_best.pt'
+  # entrep_checkpoint: 'checkpoints/entrep_full_epoch50.pth'
+  checkpoint: null
+  # Option 2: Vision encoder checkpoint riêng (từ ENTRep/model_factory.py)
+  # Dùng khi transfer learning từ pretrained vision encoder
+  # IGNORED nếu entrep_checkpoint được set
+  vision_checkpoint: '/datastore/elo/khoatn/Vision-language-Models-in-Medical-Image-Analysis/checkpoints/entrep_dino_l.pth'
+  # vision_checkpoint: '/datastore/elo/khoatn/Vision-language-Models-in-Medical-Image-Analysis/checkpoints/entrep_vision.pth'
+  # vision_checkpoint: null
+  # Option 3: Text encoder checkpoint riêng
+  # IGNORED nếu entrep_checkpoint được set
+  text_checkpoint: null
+  
+  # Other params
+  logit_scale_init_value: 0.07
+  pretrained: true
+
+# Dataset configuration
+dataset:
+  dataset_name: 'entrep'
+  dataset_type: 'contrastive'
+  data_root: 'local_data/entrep'
+  model_type: 'entrep'
+  batch_size: 64
+  num_workers: 4
+  tokenizer_name: 'openai/clip-vit-base-patch32'
+
+# Training configuration
+training:
+  num_epochs: 100
+  val_every: 1
+  save_every: 5
+  use_amp: true  # Mixed precision training
+  plot_every: 5  # Vẽ biểu đồ mỗi N epochs
+
+# Optimizer configuration
+optimizer:
+  type: 'adamw'
+  lr: 1e-5
+  weight_decay: 0.01
+  betas: [0.9, 0.999]
+
+# Learning rate scheduler
+scheduler:
+  type: 'cosine'
+  T_max: 100
+  eta_min: 1e-6
+
+# Loss configuration
+loss:
+  type: 'contrastive'
+
+# Experiment settings
+experiment:
+  seed: 42
+  output_dir: './checkpoints'
+  use_wandb: false
+  wandb_project: 'medical-vlms'

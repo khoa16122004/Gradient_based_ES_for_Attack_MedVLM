@@ -1,0 +1,32 @@
+# RSNA Zero-shot Classification with MedCLIP
+
+# Model configuration
+model:
+  model_type: "medclip"
+  checkpoint_path: "./pretrained/medclip-vit"
+  
+# Dataset configuration
+dataset:
+  dataset_name: "rsna"
+  data_root: "./local_data/rsna
+  batch_size: 16
+  num_workers: 4
+  shuffle: false  # For evaluation
+  
+# Evaluation configuration
+evaluations:
+  rsna_zero_shot:
+    type: "zero_shot"
+    class_names: ["Normal", "Pneumonia"]
+    mode: "binary"
+    templates:
+      - "this is a chest x-ray showing {}"
+      - "a chest radiograph with {}"
+      - "chest x-ray image of {}"
+    top_k: [1, 2]
+    return_predictions: true
+    
+# Output settings
+output:
+  save_results: true
+  results_dir: "./results/rsna_medclip_zero_shot"

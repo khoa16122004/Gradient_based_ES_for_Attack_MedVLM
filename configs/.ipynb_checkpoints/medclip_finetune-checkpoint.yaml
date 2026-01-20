@@ -1,0 +1,96 @@
+# MedCLIP ViT Training from Scratch Configuration
+# Training MedCLIP-ViT model from random initialization
+
+# Model configuration
+model:
+  model_type: medclip
+  text_encoder_type: bert  # BERT text encoder
+  vision_encoder_type: vit  # Vision Transformer encoder
+  
+  # No pretrained checkpoints - training from scratch
+  checkpoint: null
+  vision_pretrained: null
+  text_pretrained: null
+  vision_checkpoint: null
+  
+  # Model parameters
+  logit_scale_init_value: 0.07
+  
+  # No freezing when training from scratch
+  freeze_text: false
+  freeze_vision: false
+
+# Dataset configuration
+dataset:
+  dataset_name: mimic  # Options: mimic, entrep, covid, rsna
+  dataset_type: contrastive
+  task_type: contrastive
+  data_root: /network-volume/khoatn/mimic-cxr-dataset/
+  model_type: medclip
+  batch_size: 64  # Larger batch size for training from scratch
+  num_workers: 8
+  shuffle: true
+  
+  # Strong augmentation for training from scratch
+  augmentation:
+    random_horizontal_flip: true
+    random_rotation: 15
+    color_jitter: 0.3
+    random_crop: true
+    random_erasing: 0.1
+
+# Training configuration
+training:
+  num_epochs: 200  # More epochs for training from scratch
+  val_every: 1
+  save_every: 10
+  use_amp: true
+  plot_every: 5
+  gradient_accumulation_steps: 2  # Effective batch size = 64 * 2 = 128
+  clip_grad_norm: 1.0
+
+# Optimizer configuration
+optimizer:
+  type: adamw
+  lr: 1.0e-4  # Higher learning rate for training from scratch
+  weight_decay: 0.05
+  betas: [0.9, 0.98]
+  eps: 1.0e-6
+
+# Learning rate scheduler
+scheduler:
+  type: cosine
+  warmup_epochs: 10  # Longer warmup for training from scratch
+  T_max: 200
+  eta_min: 1.0e-6
+
+# Loss configuration
+loss:
+  type: contrastive
+  temperature: 0.07
+
+# Experiment configuration
+experiment:
+  experiment_name: medclip_vit_from_scratch
+  output_dir: ./checkpoints
+  save_best: true
+  metric_for_best: val_loss
+  mode: min
+  use_wandb: false
+  wandb_project: medclip-training
+  seed: 42
+
+# Evaluation settings
+evaluation:
+  eval_batch_size: 64
+  metrics:
+    - accuracy
+    - auc
+    - f1_score
+  save_predictions: true
+
+# Early stopping
+early_stopping:
+  enabled: true
+  patience: 20  # More patience for training from scratch
+  min_delta: 0.0001

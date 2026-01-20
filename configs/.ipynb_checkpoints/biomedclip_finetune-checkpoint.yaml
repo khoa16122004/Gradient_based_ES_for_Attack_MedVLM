@@ -1,0 +1,54 @@
+# BioMedCLIP Fine-tuning Configuration
+
+# Model configuration
+model:
+  model_type: biomedclip
+  model_name: hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224
+  checkpoint: null  # Path to full model checkpoint for resuming
+  vision_pretrained:  /home/jovyan/biomedclip_ssl_backbone.pth
+  freeze_text: false  # Freeze text encoder (vision-only training)
+  freeze_vision: false  # Freeze vision encoder (text-only training)
+
+# Dataset configuration
+dataset:
+  dataset_name: mimic  # mimic, entrep, covid, rsna
+  dataset_type: contrastive  # contrastive or classification
+  task_type: contrastive  # contrastive, zeroshot, supervised
+  data_root: /network-volume/khoatn/mimic-cxr-dataset/
+  model_type: biomedclip
+  batch_size: 16  # Smaller batch for larger model
+  num_workers: 8
+
+# Optimizer configuration
+optimizer:
+  type: adamw
+  lr: 1.0e-5  # Lower learning rate for fine-tuning
+  weight_decay: 0.01
+  betas: [0.9, 0.999]
+
+# Learning rate scheduler
+scheduler:
+  type: cosine
+  T_max: 100
+  eta_min: 1.0e-7
+
+# Training configuration
+training:
+  num_epochs: 100
+  val_every: 1
+  use_amp: true  # Mixed precision training
+  plot_every: 5
+
+# Legacy support
+num_epochs: 30
+val_every: 1
+save_every: 5
+
+# Experiment configuration
+experiment:
+  experiment_name: null  # Auto-generated if null
+  output_dir: ./checkpoints
+  use_wandb: false
+  wandb_project: biomedclip-training
+  seed: 42
+

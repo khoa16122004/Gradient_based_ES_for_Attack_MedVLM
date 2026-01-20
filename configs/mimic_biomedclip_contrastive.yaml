@@ -1,0 +1,51 @@
+# MIMIC Contrastive Learning with BioMedCLIP
+
+# Model configuration
+model:
+  model_type: "biomedclip"
+  checkpoint_path: "./pretrained/biomedclip-vit"
+  
+# Dataset configuration
+dataset:
+  dataset_name: "mimic"
+  data_root: "./local_data/mimic"
+  batch_size: 32
+  num_workers: 8
+  shuffle: true
+  
+# Training configuration
+training:
+  num_epochs: 50
+  save_every: 5
+  eval_every: 2
+  
+# Loss configuration
+loss:
+  type: "contrastive"
+  temperature: 0.07
+  
+# Optimizer configuration
+optimizer:
+  type: "adam"
+  lr: 1e-4
+  weight_decay: 1e-6
+  
+# Scheduler configuration
+scheduler:
+  type: "cosine"
+  warmup_epochs: 5
+  min_lr: 1e-6
+  
+# Evaluation configuration (optional for training)
+evaluations:
+  text_image_retrieval:
+    type: "retrieval"
+    top_k_list: [1, 5, 10, 20]
+    return_rankings: false
+    
+# Output settings
+output:
+  save_checkpoints: true
+  checkpoint_dir: "./checkpoints/mimic_biomedclip_contrastive"
+  save_results: true
+  results_dir: "./results/mimic_biomedclip_contrastive"

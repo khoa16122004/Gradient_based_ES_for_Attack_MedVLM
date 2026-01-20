@@ -1,0 +1,63 @@
+model:
+  model_type: 'entrep'
+  text_encoder_type: 'clip'
+  vision_encoder_type: 'dinov2'
+  model_name: 'dinov2_vitb14'  # Sẽ fallback sang ViT-Base
+  feature_dim: 768
+  dropout: 0.1
+  dropout_rate: 0.3
+  num_classes: 4
+  freeze_backbone: false
+  
+  # QUAN TRỌNG: Không load checkpoint nào cả
+  checkpoint: null
+  vision_checkpoint: null
+  text_checkpoint: null
+  
+  # QUAN TRỌNG: pretrained = false để train từ đầu
+  pretrained: false
+  
+  logit_scale_init_value: 0.07
+
+# Dataset configuration
+dataset:
+  dataset_name: 'entrep'
+  dataset_type: 'contrastive'
+  data_root: 'local_data/entrep'
+  model_type: 'entrep'
+  batch_size: 32
+  num_workers: 4
+  tokenizer_name: 'openai/clip-vit-base-patch32'
+
+# Training configuration
+training:
+  num_epochs: 100
+  val_every: 1
+  save_every: 5
+  use_amp: true
+  plot_every: 5
+
+# Optimizer configuration
+optimizer:
+  type: 'adamw'
+  lr: 1e-4  # Higher learning rate for training from scratch
+  weight_decay: 0.01
+  betas: [0.9, 0.999]
+
+# Learning rate scheduler
+scheduler:
+  type: 'cosine'
+  T_max: 100
+  eta_min: 1e-6
+
+# Loss configuration
+loss:
+  type: 'contrastive'
+
+# Experiment settings
+experiment:
+  seed: 42
+  output_dir: './checkpoints/entrep_vitb_from_scratch'
+  use_wandb: false
+  wandb_project: 'entrep-vitb-from-scratch'
+

@@ -1,0 +1,32 @@
+# COVID Zero-shot Classification with MedCLIP
+
+# Model configuration
+model:
+  model_type: "medclip"
+  checkpoint_path: "./pretrained/medclip-vit"
+  
+# Dataset configuration
+dataset:
+  dataset_name: "covid"
+  data_root: "./local_data"
+  batch_size: 16
+  num_workers: 4
+  shuffle: false  # For evaluation
+  
+# Evaluation configuration
+evaluations:
+  covid_zero_shot:
+    type: "zero_shot"
+    class_names: ["Normal", "COVID"]
+    mode: "binary"
+    templates:
+      - "this is a chest x-ray showing {}"
+      - "a chest radiograph of {}"
+      - "chest x-ray image with {}"
+    top_k: [1, 2]
+    return_predictions: true
+    
+# Output settings
+output:
+  save_results: true
+  results_dir: "./results/covid_medclip_zero_shot"

@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+BioMedCLIP/*
+MedCLIP/*
+ENTRep/*
+local_data/*
+pretrained/*
+*.ipynb
+example.py
+modules/*/__pycache__
+attack_dir/
+attack_new/*
+local_model/*
+checkpoints/*
+attack_tanh_transform/*
+attack_results
