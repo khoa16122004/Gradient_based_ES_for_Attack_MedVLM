@@ -35,6 +35,10 @@ from .vit import (
     ViTModel
 )
 
+from .robustmedclip import (
+    RMedCLIP
+)
+
 
 # Import constants
 from ..utils.constants import SUPPORTED_MODELS, DEFAULT_TEMPLATES
@@ -60,6 +64,9 @@ class ModelFactory:
         },
         'ViT': {
             'base': ViTModel,
+        },
+        'rmedclip': {
+            'base': RMedCLIP
         }
     }
     
@@ -285,6 +292,10 @@ class ModelFactory:
             model_name = variant # ViT-B-32, ViT-B-16, ViT-L-14
             model_class = cls.MODEL_REGISTRY['ViT']['base']
             model = model_class(model_name)
+        elif model_type == 'rmedclip':
+            model_class = cls.MODEL_REGISTRY[model_type][variant]
+            model = model_class()
+            
         else:
             # 1. Validate inputs
             cls._validate_model_type(model_type, variant)

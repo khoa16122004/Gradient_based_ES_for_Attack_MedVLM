@@ -14,6 +14,10 @@ from .model import (
     BasePromptLearner
 )
 
+from .robustmedclip import (
+    RMedCLIP
+)
+
 # MedCLIP models
 from .medclip import (
     MedCLIPModel,
