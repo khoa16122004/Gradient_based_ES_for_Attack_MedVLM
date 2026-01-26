@@ -283,7 +283,7 @@ DATASET_CONFIGS = {
 }
 
 # Supported model types
-SUPPORTED_MODELS = ['medclip', 'biomedclip', 'entrep']
+SUPPORTED_MODELS = ['medclip', 'biomedclip', 'entrep', 'rmedclip']
 
 # Default templates for text prompts
 DEFAULT_TEMPLATES = {
