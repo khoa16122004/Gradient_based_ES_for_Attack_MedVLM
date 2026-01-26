@@ -297,6 +297,7 @@ DEFAULT_TEMPLATES = {
 
 
 MODEL_TRANSFORMS = {
+
     'medclip': transforms.Compose(
         [
             transforms.Lambda(lambda x: x.convert("RGB")),
@@ -336,6 +337,18 @@ SIZE_TRANSFORM = {
         ]
     ),
     'biomedclip': transforms.Compose(
+        [
+            transforms.Resize(IMG_SIZE, interpolation=transforms.InterpolationMode.BICUBIC, antialias=True),
+            transforms.CenterCrop(IMG_SIZE),
+            transforms.Lambda(lambda x: x.convert("RGB")),
+            # transforms.ToTensor(),
+            # transforms.Normalize(
+            #     mean=BIOMEDCLIP_MEAN,
+            #     std=BIOMEDCLIP_STD
+            # ),
+        ]
+    ),
+    'rmedclip': transforms.Compose(
         [
             transforms.Resize(IMG_SIZE, interpolation=transforms.InterpolationMode.BICUBIC, antialias=True),
             transforms.CenterCrop(IMG_SIZE),
