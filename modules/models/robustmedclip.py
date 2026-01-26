@@ -34,15 +34,13 @@ class RMedCLIP(nn.Module):
         local_dir = snapshot_download(
             repo_id="razaimam45/RobustMedCLIP",
             allow_patterns=[
-                # "exp-rank-16/vit/fewshot_100_percent/checkpoints/best_model/*"
-                "exp-rank-8/vit/fewshot_100_percent/checkpoints/best_model/*"
+                "exp-rank-16/vit/fewshot_100_percent/checkpoints/best_model/*"
             ]
         )
 
         ckpt_dir = os.path.join(
             local_dir,
-            # "exp-rank-16",
-            "exp-rank-8",
+            "exp-rank-16",
             "vit",
             "fewshot_100_percent",
             "checkpoints",

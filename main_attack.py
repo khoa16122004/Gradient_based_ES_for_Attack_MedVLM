@@ -72,6 +72,12 @@ def main(args):
             model_type='ViT',
             variant=args.model_name,
         )
+
+    elif args.model_name == "rmedclip":
+        model = ModelFactory.create_model(
+            model_type='rmedclip',
+            variant='base',
+        )
     else:
         raise NotImplementedError(f"Model {args.model_name} not implemented.")
     
