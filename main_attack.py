@@ -35,7 +35,7 @@ def main(args):
 
 
    # ========= class_prompt_based ========= #
-    if args.model_name in ['medclip', 'biomedclip', 'ViT-B-32', 'ViT-B-16', "ViT-L-14"]:
+    if args.model_name in ['medclip', 'biomedclip', 'rmedclip', 'ViT-B-32', 'ViT-B-16', "ViT-L-14"]:
         class_prompts = RSNA_CLASS_PROMPTS
     elif args.model_name == "entrep":
         class_prompts = ENTREP_CLASS_PROMPTS    
