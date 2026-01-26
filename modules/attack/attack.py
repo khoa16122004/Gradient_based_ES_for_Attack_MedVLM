@@ -82,7 +82,7 @@ class ES_1_Lambda(BaseAttack):
             else:
                 sigma *= self.c_dec            
             
-            print(f"[{num_evaluation} - attack phase] Best loss: ", f_m, " L2: ", l2_m )
+            # print(f"[{num_evaluation} - attack phase] Best loss: ", f_m, " L2: ", l2_m )
             history.append((num_evaluation, float(f_m)))
             if self.is_success(f_m) and success_evaluation is None:
                 success_evaluation = num_evaluation
