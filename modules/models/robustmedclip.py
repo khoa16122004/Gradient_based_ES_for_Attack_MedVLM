@@ -55,8 +55,7 @@ class RMedCLIP(nn.Module):
         self.model = model_class(
             vision_cls='vit',
             device='cuda',
-            # lora_rank=16,
-            lora_rank=8,
+            lora_rank=16,
             load_pretrained=False,
         )
 
