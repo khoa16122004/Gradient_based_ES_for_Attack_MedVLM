@@ -51,6 +51,8 @@ class RSNADataset(BaseClassificationDataset):
         """
 
         self.cls_prompts = RSNA_CLASS_PROMPTS
+        if model_type == "rmedclip":
+            model_type = 'medclip'
         self.template = DEFAULT_TEMPLATES[model_type]
         self.data_root = os.path.join(data_root, "rsna")
         super().__init__(data_root=self.data_root, split=split, model_type=model_type, transform=transform, **kwargs)
