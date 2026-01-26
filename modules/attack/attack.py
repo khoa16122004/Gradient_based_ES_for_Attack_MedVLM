@@ -112,7 +112,7 @@ class PGDAttack(BaseAttack):
             margin, l2 = self.evaluator.evaluate_whitebox(delta)
             loss = margin.mean()
             history.append((step, float(loss.item())))
-            print("Loss: ", loss)
+            # print("Loss: ", loss)
             loss.backward()
             if loss < 0 and success_evaluation is None:
                 success_evaluation = success_evaluation
