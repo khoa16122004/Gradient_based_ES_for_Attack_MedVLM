@@ -31,7 +31,7 @@ logger = get_logger(__name__)
 class ENTREPDataset(BaseContrastiveDataset):
     def __init__(
         self,
-        data_root: str = 'local_data/entrep',
+        data_root: str = 'local_data/entrep_test',
         split: str = 'train',
         model_type: str = 'entrep',
         transform: Optional[transforms.Compose] = None,
