@@ -84,6 +84,12 @@ def main(args):
             mode_pretrained=args.mode_pretrained
         )
 
+    if args.model_name == 'rmedclip':
+        model = ModelFactory.create_model(
+            model_type='rmedclip',
+            variant='base',
+        )
+
     elif args.model_name == "entrep":
         config_path = "configs/entrep_contrastive.yaml"
         with open(config_path, 'r') as f:
@@ -120,6 +126,7 @@ def main(args):
 
     class_total = [0] * num_classes
     class_correct = [0] * num_classes
+    confusion_matrix = [[0] * num_classes for _ in range(num_classes)]
 
     # ========= Prepare output folder ========= #
     os.makedirs("evaluate_result", exist_ok=True)
@@ -162,6 +169,7 @@ def main(args):
         # ===== per-class accuracy ===== #
         for gt, pred in zip(labels_batch, pred_id):
             class_total[int(gt)] += 1
+            confusion_matrix[int(gt)][int(pred)] += 1
             if gt == pred:
                 class_correct[int(gt)] += 1
 
@@ -191,7 +199,23 @@ def main(args):
     with open(args.json_path, "w") as f:
         json.dump(correct_samples, f, indent=4)
 
+    confusion_matrix_path = args.confusion_matrix_path
+    if confusion_matrix_path is None:
+        json_root, json_ext = os.path.splitext(args.json_path)
+        confusion_matrix_path = f"{json_root}_confusion_matrix{json_ext or '.json'}"
+
+    with open(confusion_matrix_path, "w") as f:
+        json.dump(
+            {
+                "class_names": list(class_prompts.keys()),
+                "confusion_matrix": confusion_matrix,
+            },
+            f,
+            indent=4,
+        )
+
     print(f"\nSaved correct samples to {args.json_path}")
+    print(f"Saved confusion matrix to {confusion_matrix_path}")
 
 
 def get_args():
@@ -203,6 +227,7 @@ def get_args():
     parser.add_argument("--mode_pretrained", type=str, default="scratch")
     parser.add_argument("--epsilon", type=float, default=0.03)
     parser.add_argument("--json_path", type=str, required=True)
+    parser.add_argument("--confusion_matrix_path", type=str, default=None)
 
     return parser.parse_args()
 
