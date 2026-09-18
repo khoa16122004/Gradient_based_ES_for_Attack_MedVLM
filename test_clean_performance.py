@@ -54,9 +54,14 @@ def main(args):
     if args.dataset_name == "entrep" and args.data_csv_path:
         dataset_kwargs["data_csv_path"] = args.data_csv_path
 
+    if args.dataset_name == "entrep":
+        model_t_dataset = "entrep_test"
+    else:
+        model_t_dataset = "medclip_test"
+        
     dataset = DatasetFactory.create_dataset(
         dataset_name=args.dataset_name,
-        model_type='medclip',
+        model_type=model_t_dataset,
         data_root=DATA_ROOT,
         transform=None,
         **dataset_kwargs,
