@@ -38,6 +38,8 @@ class ENTREPDataset(BaseContrastiveDataset):
         data_csv_path: Optional[str] = None,
         **kwargs
     ):
+        self.data_csv_path = data_csv_path
+
         super().__init__(
             data_root=data_root,
             split=split,
@@ -46,8 +48,6 @@ class ENTREPDataset(BaseContrastiveDataset):
             **kwargs
         )
 
-        self.data_csv_path = data_csv_path
-        self.df = self._load_data()
     def create_csv(self) -> pd.DataFrame:
         df = pd.read_csv(os.path.join(self.data_root, 'entrep-data.csv'))
         for index, row in df.iterrows():
