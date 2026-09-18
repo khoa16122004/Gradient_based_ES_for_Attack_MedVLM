@@ -50,11 +50,16 @@ class Denoiser(nn.Module):
 
 def main(args):
     # ========= Dataset ========= #
+    dataset_kwargs = {}
+    if args.dataset_name == "entrep" and args.data_csv_path:
+        dataset_kwargs["data_csv_path"] = args.data_csv_path
+
     dataset = DatasetFactory.create_dataset(
         dataset_name=args.dataset_name,
         model_type='medclip',
         data_root=DATA_ROOT,
-        transform=None
+        transform=None,
+        **dataset_kwargs,
     )
 
     if args.pretrained_denoiser:
@@ -228,6 +233,7 @@ def get_args():
     parser.add_argument("--epsilon", type=float, default=0.03)
     parser.add_argument("--json_path", type=str, required=True)
     parser.add_argument("--confusion_matrix_path", type=str, default=None)
+    parser.add_argument("--data_csv_path", type=str, default=None)
 
     return parser.parse_args()
 

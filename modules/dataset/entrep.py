@@ -35,6 +35,7 @@ class ENTREPDataset(BaseContrastiveDataset):
         split: str = 'train',
         model_type: str = 'entrep',
         transform: Optional[transforms.Compose] = None,
+        data_csv_path: Optional[str] = None,
         **kwargs
     ):
         super().__init__(
@@ -44,7 +45,8 @@ class ENTREPDataset(BaseContrastiveDataset):
             transform=transform,
             **kwargs
         )
-        
+
+        self.data_csv_path = data_csv_path
         self.df = self._load_data()
     def create_csv(self) -> pd.DataFrame:
         df = pd.read_csv(os.path.join(self.data_root, 'entrep-data.csv'))
@@ -150,7 +152,7 @@ class ENTREPDataset(BaseContrastiveDataset):
         #     csv_path = val_csv_path
         # else:
         #     raise ValueError(f"Invalid split: {self.split}")
-        csv_path = data_csv_path    
+        csv_path = self.data_csv_path or data_csv_path
         if not os.path.exists(csv_path):
             raise FileNotFoundError(f"Data file not found: {csv_path}")
             
@@ -322,6 +324,7 @@ def create_entrep_dataloader(
     num_workers: int = 4,
     transform: Optional[transforms.Compose] = None,
     tokenizer_name: Optional[str] = None,
+    data_csv_path: Optional[str] = None,
     **kwargs
 ) -> torch.utils.data.DataLoader:
     """
@@ -346,6 +349,7 @@ def create_entrep_dataloader(
         split=split,
         model_type=model_type,
         transform=transform,
+        data_csv_path=data_csv_path,
         **kwargs
     )
     

@@ -59,6 +59,7 @@ class DatasetFactory:
         model_type: str = 'medclip',
         split: str = 'test',
         data_root: str = './local_data',
+        data_csv_path: Optional[str] = None,
         **kwargs
     ) -> BaseMedicalDataset:
         """
@@ -70,6 +71,7 @@ class DatasetFactory:
             model_type: 'medclip', 'biomedclip'
             split: Data split
             data_root: Root directory
+            data_csv_path: Optional override for datasets backed by a custom CSV file
             **kwargs: Additional arguments
             
         Returns:
@@ -91,11 +93,15 @@ class DatasetFactory:
         dataset_class = dataset_classes[dataset_type]
         
         # Create dataset
+        dataset_kwargs = dict(kwargs)
+        if data_csv_path is not None:
+            dataset_kwargs['data_csv_path'] = data_csv_path
+
         dataset = dataset_class(
             data_root=data_root,
             split=split,
             model_type=model_type,
-            **kwargs
+            **dataset_kwargs
         )
         
         return dataset
@@ -155,6 +161,7 @@ class DatasetFactory:
         batch_size: int = 16,
         shuffle: bool = False,
         num_workers: int = 0,
+        data_csv_path: Optional[str] = None,
         **kwargs
     ) -> DataLoader:
         """
@@ -170,6 +177,7 @@ class DatasetFactory:
             batch_size: Batch size
             shuffle: Whether to shuffle data
             num_workers: Number of workers
+            data_csv_path: Optional override for datasets backed by a custom CSV file
             **kwargs: Additional arguments
             
         Returns:
@@ -182,6 +190,7 @@ class DatasetFactory:
             model_type=model_type,
             split=split,
             data_root=data_root,
+            data_csv_path=data_csv_path,
             **kwargs
         )
         
