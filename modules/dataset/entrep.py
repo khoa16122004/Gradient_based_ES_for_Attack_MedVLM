@@ -129,7 +129,7 @@ class ENTREPDataset(BaseContrastiveDataset):
                 return False
         
         os.makedirs(self.data_root, exist_ok=True)
-        entrep_data_path = os.path.join(self.data_root, 'entrep')
+        entrep_data_path = os.path.join(self.data_root, 'entrep_test')
         print("Entrep data path: ", entrep_data_path)
         # input()
         
