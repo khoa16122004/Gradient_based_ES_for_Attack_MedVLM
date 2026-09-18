@@ -39,6 +39,7 @@ class ENTREPDataset(BaseContrastiveDataset):
         **kwargs
     ):
         self.data_csv_path = data_csv_path
+        self.dataset_root = self._resolve_dataset_root(data_root)
 
         super().__init__(
             data_root=data_root,
@@ -48,12 +49,22 @@ class ENTREPDataset(BaseContrastiveDataset):
             **kwargs
         )
 
+    @staticmethod
+    def _resolve_dataset_root(data_root: str) -> str:
+        dataset_dir_name = 'entrep_test'
+        normalized_root = os.path.normpath(data_root)
+
+        if os.path.basename(normalized_root) == dataset_dir_name:
+            return normalized_root
+
+        return os.path.join(normalized_root, dataset_dir_name)
+
     def create_csv(self) -> pd.DataFrame:
-        df = pd.read_csv(os.path.join(self.data_root, 'entrep-data.csv'))
+        df = pd.read_csv(os.path.join(self.dataset_root, 'entrep-data.csv'))
         for index, row in df.iterrows():
-            row['image_path'] = os.path.join(self.data_root, 'images', row['image_path'])
+            row['image_path'] = os.path.join(self.dataset_root, 'images', row['image_path'])
             df.loc[index, 'image_path'] = row['image_path']
-        df.to_csv(os.path.join(self.data_root, 'entrep-data.csv'), index=False)
+        df.to_csv(os.path.join(self.dataset_root, 'entrep-data.csv'), index=False)
 
         nose_df = df[df['nose'] == 1]
         nose_df = nose_df.sample(frac=1, random_state=RANDOM_STATE)
@@ -94,9 +105,9 @@ class ENTREPDataset(BaseContrastiveDataset):
         test_df = test_df.drop('Unnamed: 0', axis=1, errors='ignore').reset_index(drop=True)
         val_df = val_df.drop('Unnamed: 0', axis=1, errors='ignore').reset_index(drop=True)
 
-        train_df.to_csv(os.path.join(self.data_root, 'entrep', 'entrep-train-meta.csv'), index=True)
-        test_df.to_csv(os.path.join(self.data_root, 'entrep',  'entrep-test-meta.csv'), index=True)
-        val_df.to_csv(os.path.join(self.data_root, 'entrep',  'entrep-val-meta.csv'), index=True)
+        train_df.to_csv(os.path.join(self.dataset_root, 'entrep-train-meta.csv'), index=True)
+        test_df.to_csv(os.path.join(self.dataset_root, 'entrep-test-meta.csv'), index=True)
+        val_df.to_csv(os.path.join(self.dataset_root, 'entrep-val-meta.csv'), index=True)
     
     def _load_data(self) -> pd.DataFrame:
         """Load ENTREP data from CSV file"""
@@ -106,9 +117,9 @@ class ENTREPDataset(BaseContrastiveDataset):
                 return False
                 
             url_id = "1oJwG1T18ghT8xeHVIUOV3Ao5oDBHKYnR"
-            entrep_dir= os.path.join(self.data_root, 'entrep')
+            entrep_dir = self.dataset_root
             os.makedirs(entrep_dir, exist_ok=True)
-            entrep_output= os.path.join(entrep_dir, "entrep.zip")
+            entrep_output = os.path.join(entrep_dir, "entrep.zip")
             logger.info("Downloading ENTREP dataset from Google Drive...")
             
             try:
@@ -128,8 +139,8 @@ class ENTREPDataset(BaseContrastiveDataset):
                 logger.error(f"Failed to download ENTREP dataset: {e}")
                 return False
         
-        os.makedirs(self.data_root, exist_ok=True)
-        entrep_data_path = os.path.join(self.data_root, 'entrep_test')
+        os.makedirs(self.dataset_root, exist_ok=True)
+        entrep_data_path = self.dataset_root
         print("Entrep data path: ", entrep_data_path)
         # input()
         
