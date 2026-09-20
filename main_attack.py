@@ -19,7 +19,14 @@ import pickle as pkl
 
 _toTensor = transforms.ToTensor()
 
+
+def normalize_mode_pretrained(mode: str) -> str:
+    if mode == "supervised":
+        return "sl"
+    return mode
+
 def main(args):
+    args.mode_pretrained = normalize_mode_pretrained(args.mode_pretrained)
     # ========= Dataset ========= #        
     dataset = DatasetFactory.create_dataset(
         dataset_name=args.dataset_name,
@@ -342,7 +349,12 @@ def get_args():
     parser.add_argument("--patch_size", type=int)
     parser.add_argument("--local_steps", type=int)
     parser.add_argument("--pattern", type=str, default='')
-    parser.add_argument("--mode_pretrained", type=str, default='scratch')
+    parser.add_argument(
+        "--mode_pretrained",
+        type=str,
+        default='scratch',
+        choices=["scratch", "ssl", "at", "sl", "supervised"]
+    )
     # NES
     parser.add_argument("--alpha", type=float, default=0.01)
     parser.add_argument("--batch_q", type=int)

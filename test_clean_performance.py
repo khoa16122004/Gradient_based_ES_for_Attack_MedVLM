@@ -20,6 +20,12 @@ import torch.nn as nn
 _toTensor = transforms.ToTensor()
 
 
+def normalize_mode_pretrained(mode: str) -> str:
+    if mode == "supervised":
+        return "sl"
+    return mode
+
+
 class Denoiser(nn.Module):
     def __init__(self, channels=3, num_of_layers=17):
         super().__init__()
@@ -49,6 +55,7 @@ class Denoiser(nn.Module):
         return self.net(x)  
 
 def main(args):
+    args.mode_pretrained = normalize_mode_pretrained(args.mode_pretrained)
     # ========= Dataset ========= #
     dataset_kwargs = {}
     if args.dataset_name == "entrep" and args.data_csv_path:
@@ -230,7 +237,12 @@ def get_args():
     parser.add_argument("--model_name", type=str, required=True)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument("--pretrained_denoiser", type=str, default=None)
-    parser.add_argument("--mode_pretrained", type=str, default="scratch")
+    parser.add_argument(
+        "--mode_pretrained",
+        type=str,
+        default="scratch",
+        choices=["scratch", "ssl", "at", "sl", "supervised"]
+    )
     parser.add_argument("--epsilon", type=float, default=0.03)
     parser.add_argument("--json_path", type=str, required=True)
     parser.add_argument("--confusion_matrix_path", type=str, default=None)
