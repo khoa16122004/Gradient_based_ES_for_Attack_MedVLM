@@ -169,6 +169,13 @@ class MedCLIPModel(VisionLanguageModel):
                 file_name = "medclip_ssl_finetuning.pth"
             elif self.mode_pretrained == "at":
                 file_name = "medclip_AT.pth"
+            elif self.mode_pretrained in ("sl", "supervised"):
+                file_name = "medclip_sl.pth"
+            else:
+                raise ValueError(
+                    f"Unsupported mode_pretrained: {self.mode_pretrained}. "
+                    "Use one of: scratch, ssl, at, sl (supervised)."
+                )
 
             local_path = hf_hub_download(
                 repo_id=repo_id,

@@ -55,6 +55,13 @@ class BioMedCLIPModel(VisionLanguageModel):
                 file_name = "biomedclip_ssl_finetuning.pth"
             elif self.mode_pretrained == "at":
                 file_name = "biomedclip_AT.pth"
+            elif self.mode_pretrained in ("sl", "supervised"):
+                file_name = "biomedclip_sl.pth"
+            else:
+                raise ValueError(
+                    f"Unsupported mode_pretrained: {self.mode_pretrained}. "
+                    "Use one of: scratch, ssl, at, sl (supervised)."
+                )
                 
             local_path = hf_hub_download(
                 repo_id=repo_id,

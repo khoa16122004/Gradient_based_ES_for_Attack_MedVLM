@@ -517,6 +517,13 @@ class ENTRepModel(nn.Module):
                 file_name = "entrep_ssl_finetuning.pt"
             elif self.mode_pretrained == "at":
                 file_name = "entrep_AT.pth"
+            elif self.mode_pretrained in ("sl", "supervised"):
+                file_name = "entrep_sl.pth"
+            else:
+                raise ValueError(
+                    f"Unsupported mode_pretrained: {self.mode_pretrained}. "
+                    "Use one of: scratch, ssl, at, sl (supervised)."
+                )
             
             print(file_name)
             local_path = hf_hub_download(
