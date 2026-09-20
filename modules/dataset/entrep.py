@@ -119,13 +119,21 @@ class ENTREPDataset(BaseContrastiveDataset):
         val_df.to_csv(os.path.join(self.dataset_root, 'entrep-val-meta.csv'), index=True)
 
     def _normalize_image_path(self, image_path: str) -> str:
-        image_name = os.path.basename(str(image_path))
-        normalized_path = os.path.join(self.dataset_root, 'images', image_name)
+        original_path = str(image_path)
+        image_name = os.path.basename(original_path)
 
-        if os.path.exists(normalized_path):
-            return normalized_path
+        candidate_paths = [
+            os.path.join(self.dataset_root, 'images', image_name),
+            original_path,
+            original_path.replace('_image', '_Image'),
+            os.path.join(self.dataset_root, 'images', image_name.replace('_image', '_Image')),
+        ]
 
-        return str(image_path)
+        for candidate in candidate_paths:
+            if os.path.exists(candidate):
+                return candidate
+
+        return original_path
     
     def _load_data(self) -> pd.DataFrame:
         """Load ENTREP data from CSV file"""

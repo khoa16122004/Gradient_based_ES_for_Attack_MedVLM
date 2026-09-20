@@ -510,15 +510,18 @@ class ENTRepModel(nn.Module):
             
     def download_checkpoint(self):
         try:
-            repo_id = "Woffy/Thesis_Pretrained_Medical_Moddel"
             if self.mode_pretrained == "scratch":
                 file_name = "entrep.pt"
+                repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel"]
             elif self.mode_pretrained == "ssl":
                 file_name = "entrep_ssl_finetuning.pt"
+                repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel"]
             elif self.mode_pretrained == "at":
                 file_name = "entrep_AT.pth"
+                repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel", "Woffy/SSL-MedVLMs"]
             elif self.mode_pretrained in ("sl", "supervised"):
                 file_name = "entrep_sl.pth"
+                repo_candidates = ["Woffy/Medical_VLMs_SSL_CL", "Woffy/Thesis_Pretrained_Medical_Moddel"]
             else:
                 raise ValueError(
                     f"Unsupported mode_pretrained: {self.mode_pretrained}. "
@@ -526,13 +529,23 @@ class ENTRepModel(nn.Module):
                 )
             
             print(file_name)
-            local_path = hf_hub_download(
-                    repo_id=repo_id,  # sửa repo của bạn
-                    filename=file_name,
-                    local_dir=".",                 # tải đúng vào thư mục bạn muốn
-                    local_dir_use_symlinks=False  # QUAN TRỌNG: copy file thật, không tạo symlink
-                )   
-            return local_path
+            last_error = None
+            for repo_id in repo_candidates:
+                try:
+                    local_path = hf_hub_download(
+                        repo_id=repo_id,
+                        filename=file_name,
+                        local_dir=".",
+                    )
+                    logger.info(f"Downloaded ENTREP checkpoint from {repo_id}/{file_name}")
+                    return local_path
+                except Exception as e:
+                    last_error = e
+                    logger.warning(f"Failed to download from {repo_id}/{file_name}: {e}")
+
+            raise RuntimeError(
+                f"Could not download ENTREP checkpoint '{file_name}' from any known repo"
+            ) from last_error
         except Exception as e:
             logger.error(f"Failed to download ENTREP checkpoint: {e}")
             return None
