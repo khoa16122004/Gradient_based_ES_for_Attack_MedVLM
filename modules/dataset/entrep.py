@@ -160,8 +160,19 @@ class ENTREPDataset(BaseContrastiveDataset):
         os.makedirs(self.dataset_root, exist_ok=True)
         entrep_data_path = self.dataset_root
         print("Entrep data path: ", entrep_data_path)
-        # input()
-        
+
+        # Respect explicit CSV override: do not trigger auto-prepare/download.
+        if self.data_csv_path is not None:
+            csv_path = self.data_csv_path
+            if not os.path.exists(csv_path):
+                raise FileNotFoundError(f"Data file not found: {csv_path}")
+
+            df = pd.read_csv(csv_path)
+            if 'image_path' in df.columns:
+                df['image_path'] = df['image_path'].map(self._normalize_image_path)
+            logger.info(f"Loaded {len(df)} samples from {csv_path}")
+            return df
+
         # Check if required files exist
         data_csv_path = os.path.join(entrep_data_path, "entrep-data.csv")
         train_csv_path = os.path.join(entrep_data_path, "entrep-train-meta.csv")
