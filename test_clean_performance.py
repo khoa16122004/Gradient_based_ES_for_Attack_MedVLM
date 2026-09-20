@@ -65,7 +65,7 @@ def main(args):
     dataset = DatasetFactory.create_dataset(
         dataset_name=args.dataset_name,
         model_type='medclip',
-        data_root=DATA_ROOT,
+        data_root=args.data_root,
         transform=None,
         **dataset_kwargs,
     )
@@ -235,6 +235,7 @@ def get_args():
     parser = argparse.ArgumentParser(description="Clean Performance Evaluation")
     parser.add_argument("--dataset_name", type=str, required=True)
     parser.add_argument("--model_name", type=str, required=True)
+    parser.add_argument("--data_root", type=str, default=DATA_ROOT)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument("--pretrained_denoiser", type=str, default=None)
     parser.add_argument(

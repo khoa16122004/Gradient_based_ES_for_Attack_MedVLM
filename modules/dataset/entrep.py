@@ -53,8 +53,17 @@ class ENTREPDataset(BaseContrastiveDataset):
     def _resolve_dataset_root(data_root: str) -> str:
         dataset_dir_name = 'entrep_test'
         normalized_root = os.path.normpath(data_root)
+        base_name = os.path.basename(normalized_root)
 
-        if os.path.basename(normalized_root) == dataset_dir_name:
+        # If user already points to a specific entrep folder, keep it.
+        if base_name.startswith('entrep'):
+            return normalized_root
+
+        # If root itself already looks like dataset root, keep it.
+        if os.path.exists(os.path.join(normalized_root, 'entrep-data.csv')):
+            return normalized_root
+
+        if os.path.isdir(os.path.join(normalized_root, 'images')):
             return normalized_root
 
         return os.path.join(normalized_root, dataset_dir_name)
