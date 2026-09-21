@@ -78,6 +78,7 @@ def main(args):
         state_dict = ckpt["model_state_dict"] if isinstance(ckpt, dict) and "model_state_dict" in ckpt else ckpt
 
         print(denoiser.load_state_dict(state_dict, strict=False))
+        denoiser.eval()
     
 
     # ========= class_prompt_based ========= #
@@ -124,6 +125,8 @@ def main(args):
         )
     else:
         raise NotImplementedError(f"Model {args.model_name} not implemented.")
+
+    model.eval()
 
     # ========= compute class features ========= #
     class_features = []
