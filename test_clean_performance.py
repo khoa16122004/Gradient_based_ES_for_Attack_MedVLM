@@ -112,7 +112,7 @@ def main(args):
             model_type="entrep",
             variant='base',
             checkpoint=None,
-            pretrained=False,
+            pretrained=True,
             **{k: v for k, v in model_config.items() if k != 'model_type' and k != "pretrained" and k != "checkpoint"},
             mode_pretrained=args.mode_pretrained
             )            
