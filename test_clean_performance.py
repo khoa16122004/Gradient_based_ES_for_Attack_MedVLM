@@ -98,7 +98,7 @@ def main(args):
             mode_pretrained=args.mode_pretrained
         )
 
-    if args.model_name == 'rmedclip':
+    elif args.model_name == 'rmedclip':
         model = ModelFactory.create_model(
             model_type='rmedclip',
             variant='base',
