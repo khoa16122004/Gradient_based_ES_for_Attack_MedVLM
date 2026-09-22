@@ -140,6 +140,72 @@ class PGDAttack(BaseAttack):
         }
 
 
+class PGDRandomRestartAttack(BaseAttack):
+    def __init__(self, eps, alpha, norm, steps, evaluator, num_restarts=10):
+        super().__init__(evaluator=evaluator, eps=eps, norm=norm)
+        self.alpha = alpha
+        self.steps = steps
+        self.num_restarts = int(num_restarts)
+
+    def _random_init_delta(self):
+        delta = torch.empty_like(self.evaluator.img_tensor).uniform_(-self.eps, self.eps)
+        return clamp_eps(delta, self.eps, norm=self.norm)
+
+    def run(self):
+        best_margin = float("inf")
+        best_l2 = None
+        best_delta = None
+        best_success_eval = None
+        global_history = []
+
+        total_eval = 0
+
+        for restart_id in range(self.num_restarts):
+            if restart_id == 0:
+                delta = torch.zeros_like(self.evaluator.img_tensor, device=self.evaluator.img_tensor.device)
+            else:
+                delta = self._random_init_delta().to(self.evaluator.img_tensor.device)
+
+            delta.requires_grad = True
+
+            for step in range(self.steps):
+                margin, l2 = self.evaluator.evaluate_whitebox(delta)
+                loss = margin.mean()
+                total_eval += 1
+                global_history.append((total_eval, float(loss.item())))
+
+                loss.backward()
+
+                with torch.no_grad():
+                    grad_norm = torch.norm(delta.grad.view(delta.size(0), -1), dim=1).view(-1, 1, 1, 1)
+                    scaled_grad = delta.grad / (grad_norm + 1e-10)
+                    delta.data = delta - self.alpha * scaled_grad
+                    delta.data = clamp_eps(delta.data, self.eps, norm=self.norm)
+                    delta.grad.zero_()
+
+                cur_margin = float(loss.item())
+                if cur_margin < best_margin:
+                    best_margin = cur_margin
+                    best_l2 = float(l2.item())
+                    best_delta = delta.detach().clone()
+                    if best_margin < 0 and best_success_eval is None:
+                        best_success_eval = total_eval
+
+        if best_delta is None:
+            best_delta = torch.zeros_like(self.evaluator.img_tensor, device=self.evaluator.img_tensor.device)
+            final_margin, final_l2 = self.evaluator.evaluate_whitebox(best_delta)
+            best_margin = float(final_margin.item())
+            best_l2 = float(final_l2.item())
+
+        return {
+            "best_delta": best_delta,
+            "best_margin": best_margin,
+            "history": global_history,
+            "success_evaluation": best_success_eval,
+            "l2": best_l2,
+        }
+
+
 class ES_1_Lambda_Gradient(BaseAttack):
     def __init__(self, evaluator, eps=8/255, norm="linf",
                  theta=0.001, max_evaluation=10000, lam=64, c_inc=1.5, c_dec=0.9, device='cuda'):

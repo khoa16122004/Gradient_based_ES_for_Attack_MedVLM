@@ -5,7 +5,7 @@ from tqdm import tqdm
 import numpy as np
 import torch
 import json
-from modules.attack.attack import ES_1_Lambda, PGDAttack, ES_1_Lambda_Gradient, CEM_Attack, ESGD_Attack, NES_Attack, GridES_1_Lambda
+from modules.attack.attack import ES_1_Lambda, PGDAttack, PGDRandomRestartAttack, ES_1_Lambda_Gradient, CEM_Attack, ESGD_Attack, NES_Attack, GridES_1_Lambda
 from modules.attack.evaluator import EvaluatePerturbation
 from modules.attack.util import seed_everything 
 from modules.utils.helpers import _extract_label, load_open_clip_model
@@ -153,6 +153,8 @@ def main(args):
     
     elif args.attacker_name == "PGD":
         save_dir = os.path.join(args.out_dir, args.model_name, args.mode_pretrained, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_steps={args.PGD_steps}_alpha={args.alpha}_norm={args.norm}_seed={args.seed}")
+    elif args.attacker_name == "PGD_RR":
+        save_dir = os.path.join(args.out_dir, args.model_name, args.mode_pretrained, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_steps={args.PGD_steps}_alpha={args.alpha}_restarts={args.num_restarts}_norm={args.norm}_seed={args.seed}")
     elif args.attacker_name == "ES_1_Lambda_Gradient":
         save_dir = os.path.join(args.out_dir, args.model_name, args.dataset_name, f"attack_name={args.attacker_name}_mode={args.mode}_epsilon={args.epsilon}_theta={args.theta}_lamda={args.lamda}_norm={args.norm}_seed={args.seed}")
     elif args.attacker_name == "CEM":
@@ -192,6 +194,15 @@ def main(args):
             theta=args.theta,
             max_evaluation=args.max_evaluation,
             lam=args.lamda
+        )
+    elif args.attacker_name == "PGD_RR":
+        attacker = PGDRandomRestartAttack(
+            eps=args.epsilon,
+            alpha=args.alpha,
+            norm=args.norm,
+            steps=args.PGD_steps,
+            evaluator=evaluator,
+            num_restarts=args.num_restarts,
         )
     elif args.attacker_name == "CEM":
         attacker = CEM_Attack(
@@ -329,7 +340,7 @@ def get_args():
     
     # Attack configuration
     parser.add_argument("--attacker_name", type=str, required=True,
-                        choices=[ "ES_1_Lambda", "ES_1_Lambda_Gradient", 'PGD', "CEM", "ESGD", "NES", "GridES_1_Lambda"],
+                        choices=[ "ES_1_Lambda", "ES_1_Lambda_Gradient", 'PGD', 'PGD_RR', "CEM", "ESGD", "NES", "GridES_1_Lambda"],
                         help="Name of attacker algorithm")
     parser.add_argument("--epsilon", type=float, default=8/255,
                         help="Maximum perturbation magnitude (default: 8/255)")
@@ -339,6 +350,7 @@ def get_args():
     parser.add_argument("--theta", type=float, default=0.001)
     parser.add_argument("--max_evaluation", type=int, default=10000)
     parser.add_argument("--PGD_steps", type=int, default=100)
+    parser.add_argument("--num_restarts", type=int, default=10)
     parser.add_argument("--lamda", type=int, default=50)
     parser.add_argument("--mu", type=int, default=8)
     parser.add_argument("--start_idx", type=int, default=0)
