@@ -48,27 +48,44 @@ class BioMedCLIPModel(VisionLanguageModel):
         if checkpoint is not None:
             self.load_checkpoint(checkpoint)
         else:
-            repo_id = "Woffy/Thesis_Pretrained_Medical_Moddel"
             if self.mode_pretrained == "scratch":
                 file_name = "biomedclip.pth"
+                repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel"]
             elif self.mode_pretrained == "ssl":
                 file_name = "biomedclip_ssl_finetuning.pth"
+                repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel"]
             elif self.mode_pretrained == "at":
                 file_name = "biomedclip_AT.pth"
+                repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel", "Woffy/SSL-MedVLMs"]
             elif self.mode_pretrained in ("sl", "supervised"):
                 file_name = "biomedclip_sl.pth"
+                # Supervised checkpoint is hosted on this repo.
+                repo_candidates = ["Woffy/Medical_VLMs_SSL_CL", "Woffy/Thesis_Pretrained_Medical_Moddel", "Woffy/SSL-MedVLMs"]
             else:
                 raise ValueError(
                     f"Unsupported mode_pretrained: {self.mode_pretrained}. "
                     "Use one of: scratch, ssl, at, sl (supervised)."
                 )
-                
-            local_path = hf_hub_download(
-                repo_id=repo_id,
-                filename=file_name,
-                local_dir=".",          # lưu ngay thư mục hiện tại
-                local_dir_use_symlinks=False  # QUAN TRỌNG: copy file thật, không tạo symlink
-            )   
+
+            local_path = None
+            last_error = None
+            for repo_id in repo_candidates:
+                try:
+                    local_path = hf_hub_download(
+                        repo_id=repo_id,
+                        filename=file_name,
+                        local_dir=".",
+                    )
+                    print(f"Downloaded BioMedCLIP checkpoint from {repo_id}/{file_name}")
+                    break
+                except Exception as e:
+                    last_error = e
+                    print(f"Failed to download from {repo_id}/{file_name}: {e}")
+
+            if local_path is None:
+                raise RuntimeError(
+                    f"Could not download BioMedCLIP checkpoint '{file_name}' from any known repo"
+                ) from last_error
 
             ckpt = torch.load(local_path)
             if isinstance(ckpt, dict) and "model_state_dict" in ckpt:
