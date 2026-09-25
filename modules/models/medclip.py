@@ -163,17 +163,17 @@ class MedCLIPModel(VisionLanguageModel):
             self.load_checkpoint(checkpoint)
         else:
             if self.mode_pretrained == "scratch":    
-                file_name = "medclip.pt"
+                file_candidates = ["medclip.pt"]
                 repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel"]
             elif self.mode_pretrained == "ssl":
-                file_name = "medclip_ssl_finetuning.pth"
+                file_candidates = ["medclip_ssl_finetuning.pth"]
                 repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel"]
             elif self.mode_pretrained == "at":
-                file_name = "medclip_AT.pth"
+                file_candidates = ["medclip_AT.pth"]
                 repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel", "Woffy/SSL-MedVLMs"]
             elif self.mode_pretrained in ("sl", "supervised"):
-                file_name = "medclip_sl.pth"
-                # The supervised checkpoint is hosted in this repo.
+                # Prefer supervised checkpoint name, but fall back to common published names.
+                file_candidates = ["medclip_sl.pth", "medclip.pt", "medclip_ssl_finetuning.pth"]
                 repo_candidates = ["Woffy/Medical_VLMs_SSL_CL", "Woffy/Thesis_Pretrained_Medical_Moddel"]
             else:
                 raise ValueError(
@@ -183,22 +183,42 @@ class MedCLIPModel(VisionLanguageModel):
 
             local_path = None
             last_error = None
-            for repo_id in repo_candidates:
-                try:
-                    local_path = hf_hub_download(
-                        repo_id=repo_id,
-                        filename=file_name,
-                        local_dir=".",
-                    )
-                    print(f"Downloaded MedCLIP checkpoint from {repo_id}/{file_name}")
+
+            # Prefer existing local checkpoint files before attempting network download.
+            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            local_candidates = []
+            for file_name in file_candidates:
+                local_candidates.extend([
+                    file_name,
+                    os.path.join(os.getcwd(), file_name),
+                    os.path.join(repo_root, file_name),
+                ])
+            for candidate in local_candidates:
+                if os.path.isfile(candidate):
+                    local_path = candidate
+                    print(f"Using local MedCLIP checkpoint: {local_path}")
                     break
-                except Exception as e:
-                    last_error = e
-                    print(f"Failed to download from {repo_id}/{file_name}: {e}")
+
+            if local_path is None:
+                for repo_id in repo_candidates:
+                    for file_name in file_candidates:
+                        try:
+                            local_path = hf_hub_download(
+                                repo_id=repo_id,
+                                filename=file_name,
+                                local_dir=".",
+                            )
+                            print(f"Downloaded MedCLIP checkpoint from {repo_id}/{file_name}")
+                            break
+                        except Exception as e:
+                            last_error = e
+                            print(f"Failed to download from {repo_id}/{file_name}: {e}")
+                    if local_path is not None:
+                        break
 
             if local_path is None:
                 raise RuntimeError(
-                    f"Could not download MedCLIP checkpoint '{file_name}' from any known repo"
+                    f"Could not download MedCLIP checkpoint from candidates {file_candidates} in any known repo"
                 ) from last_error
 
             ckpt = torch.load(local_path)

@@ -49,17 +49,17 @@ class BioMedCLIPModel(VisionLanguageModel):
             self.load_checkpoint(checkpoint)
         else:
             if self.mode_pretrained == "scratch":
-                file_name = "biomedclip.pth"
+                file_candidates = ["biomedclip.pth"]
                 repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel"]
             elif self.mode_pretrained == "ssl":
-                file_name = "biomedclip_ssl_finetuning.pth"
+                file_candidates = ["biomedclip_ssl_finetuning.pth"]
                 repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel"]
             elif self.mode_pretrained == "at":
-                file_name = "biomedclip_AT.pth"
+                file_candidates = ["biomedclip_AT.pth"]
                 repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel", "Woffy/SSL-MedVLMs"]
             elif self.mode_pretrained in ("sl", "supervised"):
-                file_name = "biomedclip_sl.pth"
-                # Supervised checkpoint is hosted on this repo.
+                # Prefer supervised checkpoint name, but fall back to common published names.
+                file_candidates = ["biomedclip_sl.pth", "biomedclip.pth", "biomedclip_ssl_finetuning.pth"]
                 repo_candidates = ["Woffy/Medical_VLMs_SSL_CL", "Woffy/Thesis_Pretrained_Medical_Moddel", "Woffy/SSL-MedVLMs"]
             else:
                 raise ValueError(
@@ -69,22 +69,42 @@ class BioMedCLIPModel(VisionLanguageModel):
 
             local_path = None
             last_error = None
-            for repo_id in repo_candidates:
-                try:
-                    local_path = hf_hub_download(
-                        repo_id=repo_id,
-                        filename=file_name,
-                        local_dir=".",
-                    )
-                    print(f"Downloaded BioMedCLIP checkpoint from {repo_id}/{file_name}")
+
+            # Prefer existing local checkpoint files before attempting network download.
+            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            local_candidates = []
+            for file_name in file_candidates:
+                local_candidates.extend([
+                    file_name,
+                    os.path.join(os.getcwd(), file_name),
+                    os.path.join(repo_root, file_name),
+                ])
+            for candidate in local_candidates:
+                if os.path.isfile(candidate):
+                    local_path = candidate
+                    print(f"Using local BioMedCLIP checkpoint: {local_path}")
                     break
-                except Exception as e:
-                    last_error = e
-                    print(f"Failed to download from {repo_id}/{file_name}: {e}")
+
+            if local_path is None:
+                for repo_id in repo_candidates:
+                    for file_name in file_candidates:
+                        try:
+                            local_path = hf_hub_download(
+                                repo_id=repo_id,
+                                filename=file_name,
+                                local_dir=".",
+                            )
+                            print(f"Downloaded BioMedCLIP checkpoint from {repo_id}/{file_name}")
+                            break
+                        except Exception as e:
+                            last_error = e
+                            print(f"Failed to download from {repo_id}/{file_name}: {e}")
+                    if local_path is not None:
+                        break
 
             if local_path is None:
                 raise RuntimeError(
-                    f"Could not download BioMedCLIP checkpoint '{file_name}' from any known repo"
+                    f"Could not download BioMedCLIP checkpoint from candidates {file_candidates} in any known repo"
                 ) from last_error
 
             ckpt = torch.load(local_path)
@@ -131,7 +151,15 @@ class BioMedCLIPModel(VisionLanguageModel):
             return
             
         if os.path.exists(checkpoint_path):
-            state_dict = torch.load(checkpoint_path, map_location=self.device)
+            checkpoint = torch.load(checkpoint_path, map_location=self.device)
+            if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
+                state_dict = checkpoint["model_state_dict"]
+            elif isinstance(checkpoint, dict) and "state_dict" in checkpoint:
+                state_dict = checkpoint["state_dict"]
+            else:
+                state_dict = checkpoint
+
+            state_dict = self._strip_prefix_from_state_dict(state_dict, prefixes=("model.", "module."))
             missing_keys, unexpected_keys = self.model.load_state_dict(state_dict, strict=strict)
             
             if missing_keys:
