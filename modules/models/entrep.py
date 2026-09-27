@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import os
 from typing import Optional
 from pathlib import Path
 from transformers import AutoModelForMaskedLM
@@ -503,12 +504,12 @@ class ENTRepModel(nn.Module):
         self.logit_scale = nn.Parameter(torch.log(torch.tensor(1/logit_scale_init_value)))
         
       
-        ckp = self.download_checkpoint()
+        ckp = self.download_checkpoint(force_download=False)
         print(ckp)
         self._load_full_checkpoint(ckp)
             
             
-    def download_checkpoint(self):
+    def download_checkpoint(self, force_download: bool = False):
         try:
             if self.mode_pretrained == "scratch":
                 file_name = "entrep.pt"
@@ -536,6 +537,7 @@ class ENTRepModel(nn.Module):
                         repo_id=repo_id,
                         filename=file_name,
                         local_dir=".",
+                        force_download=force_download,
                     )
                     logger.info(f"Downloaded ENTREP checkpoint from {repo_id}/{file_name}")
                     return local_path
@@ -549,13 +551,49 @@ class ENTRepModel(nn.Module):
         except Exception as e:
             logger.error(f"Failed to download ENTREP checkpoint: {e}")
             return None
+
+    @staticmethod
+    def _is_corrupt_checkpoint_error(exc: Exception) -> bool:
+        msg = str(exc).lower()
+        patterns = [
+            "failed finding central directory",
+            "failed reading zip archive",
+            "pytorchstreamreader",
+            "not a zip archive",
+        ]
+        return any(p in msg for p in patterns)
+
     def _load_full_checkpoint(self, checkpoint_path: str):
         """
         Load checkpoint cho toàn bộ ENTRep model (vision + text + logit_scale)
         Tự động filter ra classifier keys nếu num_classes khác để tránh size mismatch
         """
         logger.info(f"📥 Loading full ENTRep checkpoint: {checkpoint_path}")
-        checkpoint = torch.load(checkpoint_path, map_location='cpu')
+        if not checkpoint_path:
+            raise RuntimeError("Checkpoint path is empty. Failed to download ENTRep checkpoint.")
+
+        try:
+            checkpoint = torch.load(checkpoint_path, map_location='cpu')
+        except Exception as e:
+            if not self._is_corrupt_checkpoint_error(e):
+                raise
+
+            logger.warning(
+                "Detected corrupted checkpoint archive. Removing local file and re-downloading..."
+            )
+            try:
+                if os.path.isfile(checkpoint_path):
+                    os.remove(checkpoint_path)
+                    logger.info(f"Removed corrupted checkpoint: {checkpoint_path}")
+            except OSError as remove_error:
+                logger.warning(f"Could not remove corrupted checkpoint file: {remove_error}")
+
+            refreshed_path = self.download_checkpoint(force_download=True)
+            if not refreshed_path:
+                raise RuntimeError("Re-download failed after corrupted checkpoint was detected.") from e
+
+            logger.info(f"Retry loading checkpoint from: {refreshed_path}")
+            checkpoint = torch.load(refreshed_path, map_location='cpu')
         
         if 'model_state_dict' in checkpoint:
             state_dict = checkpoint['model_state_dict']
