@@ -126,6 +126,44 @@ class MedCLIPVisionModelViT(nn.Module):
         return img_embeds
 
 class MedCLIPModel(VisionLanguageModel):
+    @staticmethod
+    def _is_corrupt_checkpoint_error(exc: Exception) -> bool:
+        msg = str(exc).lower()
+        patterns = [
+            "failed finding central directory",
+            "failed reading zip archive",
+            "pytorchstreamreader",
+            "not a zip archive",
+        ]
+        return any(p in msg for p in patterns)
+
+    def _download_checkpoint_from_candidates(
+        self,
+        file_candidates,
+        repo_candidates,
+        force_download: bool = False,
+    ):
+        local_path = None
+        last_error = None
+        for repo_id in repo_candidates:
+            for file_name in file_candidates:
+                try:
+                    local_path = hf_hub_download(
+                        repo_id=repo_id,
+                        filename=file_name,
+                        local_dir=".",
+                        force_download=force_download,
+                    )
+                    print(f"Downloaded MedCLIP checkpoint from {repo_id}/{file_name}")
+                    return local_path
+                except Exception as e:
+                    last_error = e
+                    print(f"Failed to download from {repo_id}/{file_name}: {e}")
+
+        raise RuntimeError(
+            f"Could not download MedCLIP checkpoint from candidates {file_candidates} in any known repo"
+        ) from last_error
+
     def __init__(self,
         text_encoder_type='bert',
         vision_encoder_type='vit',
@@ -173,7 +211,7 @@ class MedCLIPModel(VisionLanguageModel):
                 repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel", "Woffy/SSL-MedVLMs"]
             elif self.mode_pretrained in ("sl", "supervised"):
                 # Prefer supervised checkpoint name, but fall back to common published names.
-                file_candidates = ["medclip_sl.pth", "medclip.pt", "medclip_ssl_finetuning.pth"]
+                file_candidates = ["medclip_sl.pth"]
                 repo_candidates = ["Woffy/Medical_VLMs_SSL_CL", "Woffy/Thesis_Pretrained_Medical_Moddel"]
             else:
                 raise ValueError(
@@ -182,7 +220,6 @@ class MedCLIPModel(VisionLanguageModel):
                 )
 
             local_path = None
-            last_error = None
 
             # Prefer existing local checkpoint files before attempting network download.
             repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -200,28 +237,34 @@ class MedCLIPModel(VisionLanguageModel):
                     break
 
             if local_path is None:
-                for repo_id in repo_candidates:
-                    for file_name in file_candidates:
-                        try:
-                            local_path = hf_hub_download(
-                                repo_id=repo_id,
-                                filename=file_name,
-                                local_dir=".",
-                            )
-                            print(f"Downloaded MedCLIP checkpoint from {repo_id}/{file_name}")
-                            break
-                        except Exception as e:
-                            last_error = e
-                            print(f"Failed to download from {repo_id}/{file_name}: {e}")
-                    if local_path is not None:
-                        break
+                local_path = self._download_checkpoint_from_candidates(
+                    file_candidates=file_candidates,
+                    repo_candidates=repo_candidates,
+                    force_download=False,
+                )
 
-            if local_path is None:
-                raise RuntimeError(
-                    f"Could not download MedCLIP checkpoint from candidates {file_candidates} in any known repo"
-                ) from last_error
+            try:
+                ckpt = torch.load(local_path, map_location='cpu')
+            except Exception as e:
+                if not self._is_corrupt_checkpoint_error(e):
+                    raise
 
-            ckpt = torch.load(local_path)
+                print("Detected corrupted MedCLIP checkpoint. Removing local candidates and re-downloading...")
+                for candidate in local_candidates:
+                    try:
+                        if os.path.isfile(candidate):
+                            os.remove(candidate)
+                            print(f"Removed corrupted local file: {candidate}")
+                    except OSError as remove_error:
+                        print(f"Could not remove {candidate}: {remove_error}")
+
+                local_path = self._download_checkpoint_from_candidates(
+                    file_candidates=file_candidates,
+                    repo_candidates=repo_candidates,
+                    force_download=True,
+                )
+                ckpt = torch.load(local_path, map_location='cpu')
+
             if isinstance(ckpt, dict) and "model_state_dict" in ckpt:
                 model_state_dict = ckpt["model_state_dict"]
             else:
