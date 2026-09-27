@@ -181,12 +181,24 @@ class ENTREPDataset(BaseContrastiveDataset):
             logger.info(f"Loaded {len(df)} samples from {csv_path}")
             return df
 
-        # Check if required files exist
+        # Check local data availability first
         data_csv_path = os.path.join(entrep_data_path, "entrep-data.csv")
+        alt_data_csv_path = os.path.join(entrep_data_path, "data.csv")
         train_csv_path = os.path.join(entrep_data_path, "entrep-train-meta.csv")
         test_csv_path = os.path.join(entrep_data_path, "entrep-test-meta.csv")
         val_csv_path = os.path.join(entrep_data_path, "entrep-val-meta.csv")
-        if not os.path.exists(train_csv_path) or not os.path.exists(test_csv_path) or not os.path.exists(val_csv_path):
+        images_dir = os.path.join(entrep_data_path, "images")
+
+        has_main_csv = os.path.exists(data_csv_path) or os.path.exists(alt_data_csv_path)
+        has_split_csv = (
+            os.path.exists(train_csv_path)
+            and os.path.exists(test_csv_path)
+            and os.path.exists(val_csv_path)
+        )
+        has_images = os.path.isdir(images_dir)
+
+        # If local dataset is complete enough for evaluation, do not auto-download.
+        if not ((has_main_csv and has_images) or has_split_csv):
             logger.info(f"ENTREP data not found in {self.data_root}, preparing data")
             if not download_entrep_dataset():
                 logger.warning("Failed to download ENTREP data")
@@ -201,6 +213,8 @@ class ENTREPDataset(BaseContrastiveDataset):
         # else:
         #     raise ValueError(f"Invalid split: {self.split}")
         csv_path = self.data_csv_path or data_csv_path
+        if not os.path.exists(csv_path) and os.path.exists(alt_data_csv_path):
+            csv_path = alt_data_csv_path
         if not os.path.exists(csv_path):
             raise FileNotFoundError(f"Data file not found: {csv_path}")
             
