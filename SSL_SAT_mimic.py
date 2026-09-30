@@ -22,7 +22,7 @@ from SL_CTL_mimic import (
 CONFIG = deepcopy(BASE_CONFIG)
 CONFIG.update(
     {
-        "output_dir": "checkpoints/ssl_sat_mimic_medclip",
+        "output_dir": "checkpoints/ssl_sat_mimic_biomedclip",
         "sat_eps": 4.0 / 255.0,
         "sat_alpha": 1.0 / 255.0,
         "sat_steps": 3,
@@ -174,10 +174,23 @@ def maybe_limit_sl_loader(train_loader: DataLoader, config: Dict) -> DataLoader:
 def parse_args():
     parser = argparse.ArgumentParser(description="Train MIMIC with SSL+SAT stage-1 + CTL stage-2")
     parser.add_argument(
+        "--model-name",
+        type=str,
+        default=None,
+        choices=["medclip", "biomedclip"],
+        help="Backbone model for MIMIC training.",
+    )
+    parser.add_argument(
         "--debug-num-samples",
         type=int,
         default=None,
         help="Limit number of samples per split for debugging. If omitted, use full dataset.",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=None,
+        help="Batch size override for train/val dataloaders.",
     )
     parser.add_argument("--sat-eps", type=float, default=0.03, help="Linf epsilon for PGD SAT view")
     parser.add_argument("--sat-alpha", type=float, default=0.01, help="PGD step size for SAT view")
@@ -195,8 +208,12 @@ def main():
     args = parse_args()
 
     config = deepcopy(CONFIG)
+    if args.model_name is not None:
+        config["model_name"] = args.model_name
     if args.debug_num_samples is not None:
         config["debug_num_samples"] = args.debug_num_samples
+    if args.batch_size is not None:
+        config["batch_size"] = args.batch_size
     if args.sat_eps is not None:
         config["sat_eps"] = args.sat_eps
     if args.sat_alpha is not None:

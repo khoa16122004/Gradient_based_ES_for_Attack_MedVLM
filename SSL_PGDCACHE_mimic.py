@@ -27,7 +27,7 @@ from SL_CTL_mimic import (
 CONFIG = deepcopy(BASE_CONFIG)
 CONFIG.update(
     {
-        "output_dir": "/datastore/hoangln/KBS/checkpoints/ssl_pgdcache_mimic_medclip",
+        "output_dir": "/datastore/hoangln/KBS/checkpoints/ssl_pgdcache_mimic_biomedclip",
         "sat_eps": 0.03,
         "sat_alpha": 0.01,
         "sat_steps": 3,
@@ -42,7 +42,7 @@ CONFIG.update(
         "aug_blur_sigma_min": 0.1,
         "aug_blur_sigma_max": 1.5,
         "aug_erasing_p": 0.2,
-        "pgd_cache_dir": "/datastore/hoangln/KBS/cache/pgd_vanilla_mimic_medclip",
+        "pgd_cache_dir": "/datastore/hoangln/KBS/cache/pgd_vanilla_mimic_biomedclip",
     }
 )
 
@@ -394,10 +394,23 @@ def maybe_limit_sl_loader(train_loader: DataLoader, config: Dict) -> DataLoader:
 def parse_args():
     parser = argparse.ArgumentParser(description="Train MIMIC with SSL+PGDCache stage-1 + CTL stage-2")
     parser.add_argument(
+        "--model-name",
+        type=str,
+        default=None,
+        choices=["medclip", "biomedclip"],
+        help="Backbone model for MIMIC training.",
+    )
+    parser.add_argument(
         "--debug-num-samples",
         type=int,
         default=None,
         help="Limit number of samples per split for debugging. If omitted, use full dataset.",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=None,
+        help="Batch size override for train/val dataloaders.",
     )
     parser.add_argument("--sat-eps", type=float, default=CONFIG["sat_eps"], help="Linf epsilon for cached PGD")
     parser.add_argument("--sat-alpha", type=float, default=CONFIG["sat_alpha"], help="PGD step size for cached PGD")
@@ -426,8 +439,12 @@ def main():
     args = parse_args()
 
     config = deepcopy(CONFIG)
+    if args.model_name is not None:
+        config["model_name"] = args.model_name
     if args.debug_num_samples is not None:
         config["debug_num_samples"] = args.debug_num_samples
+    if args.batch_size is not None:
+        config["batch_size"] = args.batch_size
     if args.sat_eps is not None:
         config["sat_eps"] = args.sat_eps
     if args.sat_alpha is not None:

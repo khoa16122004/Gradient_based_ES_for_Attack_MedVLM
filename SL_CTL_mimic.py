@@ -48,7 +48,7 @@ DEFAULT_TEXT_BY_LABEL: Dict[str, str] = {
 CONFIG = {
     "seed": 42,
     "device": "cuda" if torch.cuda.is_available() else "cpu",
-    "model_name": "medclip",  # medclip | biomedclip
+    "model_name": "biomedclip",  # medclip | biomedclip
     "dataset_name": "mimic",
     "mode_pretrained": "scratch",  # scratch | ssl | at | sl
     "batch_size": 64,
@@ -64,7 +64,7 @@ CONFIG = {
     "freeze_text_in_sl": True,
     "unfreeze_text_in_ctl": True,
     "debug_num_samples": None,
-    "output_dir": "/datastore/hoangln/KBS/checkpoints/sl_ctl_mimic_medclip",
+    "output_dir": "/datastore/hoangln/KBS/checkpoints/sl_ctl_mimic_biomedclip",
     "data": {
         "data_root": "/datastore/hoangln/KBS/mimic-cxr",
         "csv_file": "/datastore/hoangln/KBS/mimic-cxr/mimic-cxr.csv",
@@ -508,10 +508,23 @@ def print_config(config: Dict):
 def parse_args():
     parser = argparse.ArgumentParser(description="Train MIMIC SL + CTL")
     parser.add_argument(
+        "--model-name",
+        type=str,
+        default=None,
+        choices=["medclip", "biomedclip"],
+        help="Backbone model for MIMIC training.",
+    )
+    parser.add_argument(
         "--debug-num-samples",
         type=int,
         default=None,
         help="Limit number of samples per split for debugging. If omitted, use full dataset.",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=None,
+        help="Batch size override for train/val dataloaders.",
     )
     return parser.parse_args()
 
@@ -520,8 +533,12 @@ def main():
     args = parse_args()
 
     config = deepcopy(CONFIG)
+    if args.model_name is not None:
+        config["model_name"] = args.model_name
     if args.debug_num_samples is not None:
         config["debug_num_samples"] = args.debug_num_samples
+    if args.batch_size is not None:
+        config["batch_size"] = args.batch_size
 
     setup_seed(config["seed"])
     print_config(config)
