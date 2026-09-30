@@ -4,6 +4,7 @@ from typing import Dict
 
 import torch
 import torch.nn.functional as F
+from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 
 from SL_CTL_mimic import (
@@ -142,6 +143,34 @@ def train_ssl_sat_stage(backbone_model, train_loader, config: Dict):
         print(f"[SSL+SAT][Epoch {epoch}/{config['epochs_sl']}] train_loss={train_loss:.4f}")
 
 
+def maybe_limit_sl_loader(train_loader: DataLoader, config: Dict) -> DataLoader:
+    sl_num_samples = config.get("sl_num_samples")
+    if sl_num_samples is None:
+        return train_loader
+
+    total = len(train_loader.dataset)
+    if sl_num_samples <= 0:
+        raise ValueError("sl_num_samples must be > 0 when provided.")
+    if sl_num_samples >= total:
+        print(f"[SSL+SAT] sl_num_samples={sl_num_samples} >= dataset size={total}; using full dataset.")
+        return train_loader
+
+    generator = torch.Generator()
+    generator.manual_seed(config["seed"])
+    indices = torch.randperm(total, generator=generator)[:sl_num_samples].tolist()
+    subset = Subset(train_loader.dataset, indices)
+
+    print(f"[SSL+SAT] Using {len(subset)}/{total} samples for SL stage.")
+    return DataLoader(
+        subset,
+        batch_size=train_loader.batch_size,
+        shuffle=True,
+        num_workers=train_loader.num_workers,
+        pin_memory=train_loader.pin_memory,
+        drop_last=train_loader.drop_last,
+    )
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Train MIMIC with SSL+SAT stage-1 + CTL stage-2")
     parser.add_argument(
@@ -153,6 +182,12 @@ def parse_args():
     parser.add_argument("--sat-eps", type=float, default=0.03, help="Linf epsilon for PGD SAT view")
     parser.add_argument("--sat-alpha", type=float, default=0.01, help="PGD step size for SAT view")
     parser.add_argument("--sat-steps", type=int, default=100, help="Number of PGD steps for SAT view")
+    parser.add_argument(
+        "--sl-num-samples",
+        type=int,
+        default=1000,
+        help="Number of randomly selected training samples used only for SSL stage. If omitted, use full train set.",
+    )
     return parser.parse_args()
 
 
@@ -168,6 +203,8 @@ def main():
         config["sat_alpha"] = args.sat_alpha
     if args.sat_steps is not None:
         config["sat_steps"] = args.sat_steps
+    if args.sl_num_samples is not None:
+        config["sl_num_samples"] = args.sl_num_samples
 
     setup_seed(config["seed"])
     print_config(config)
@@ -176,7 +213,8 @@ def main():
     backbone_model = build_model(config)
 
     if config["run_sl_stage"]:
-        train_ssl_sat_stage(backbone_model, train_loader, config)
+        sl_train_loader = maybe_limit_sl_loader(train_loader, config)
+        train_ssl_sat_stage(backbone_model, sl_train_loader, config)
 
     if config["run_ctl_stage"]:
         print("Starting stage-2 CTL multimodal training...")
