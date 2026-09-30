@@ -64,10 +64,10 @@ CONFIG = {
     "freeze_text_in_sl": True,
     "unfreeze_text_in_ctl": True,
     "debug_num_samples": None,
-    "output_dir": "checkpoints/sl_ctl_mimic_medclip",
+    "output_dir": "/datastore/hoangln/KBS/checkpoints/sl_ctl_mimic_medclip",
     "data": {
-        "data_root": "./mimic_cxr",
-        "csv_file": "./mimic_cxr/mimic-cxr.csv",
+        "data_root": "/datastore/hoangln/KBS/mimic_cxr",
+        "csv_file": "/datastore/hoangln/KBS/mimic_cxr/mimic-cxr.csv",
         "train_split": "train",
         "val_split": "valid",
         "test_split": "test",
