@@ -150,9 +150,9 @@ def parse_args():
         default=None,
         help="Limit number of samples per split for debugging. If omitted, use full dataset.",
     )
-    parser.add_argument("--sat-eps", type=float, default=None, help="Linf epsilon for PGD SAT view")
-    parser.add_argument("--sat-alpha", type=float, default=None, help="PGD step size for SAT view")
-    parser.add_argument("--sat-steps", type=int, default=None, help="Number of PGD steps for SAT view")
+    parser.add_argument("--sat-eps", type=float, default=0.03, help="Linf epsilon for PGD SAT view")
+    parser.add_argument("--sat-alpha", type=float, default=0.01, help="PGD step size for SAT view")
+    parser.add_argument("--sat-steps", type=int, default=100, help="Number of PGD steps for SAT view")
     return parser.parse_args()
 
 

@@ -137,9 +137,9 @@ def train_ssl_sat_stage(model, dataloader, optimizer, config: dict):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train ENTREP with SSL+SAT stage-1 + CLIP stage-2")
-    parser.add_argument("--sat-eps", type=float, default=None, help="Linf epsilon for PGD SAT view")
-    parser.add_argument("--sat-alpha", type=float, default=None, help="PGD step size for SAT view")
-    parser.add_argument("--sat-steps", type=int, default=None, help="Number of PGD steps for SAT view")
+    parser.add_argument("--sat-eps", type=float, default=0.03, help="Linf epsilon for PGD SAT view")
+    parser.add_argument("--sat-alpha", type=float, default=0.01, help="PGD step size for SAT view")
+    parser.add_argument("--sat-steps", type=int, default=100, help="Number of PGD steps for SAT view")
     return parser.parse_args()
 
 
