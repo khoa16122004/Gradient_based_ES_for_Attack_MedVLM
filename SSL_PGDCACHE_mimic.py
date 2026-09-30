@@ -6,6 +6,8 @@ from typing import Dict
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
+from torchvision import transforms
+import torchvision.transforms.functional as TVF
 from tqdm import tqdm
 
 from SL_CTL_mimic import (
@@ -25,14 +27,33 @@ from SL_CTL_mimic import (
 CONFIG = deepcopy(BASE_CONFIG)
 CONFIG.update(
     {
-        "output_dir": "checkpoints/ssl_pgdcache_mimic_medclip",
-        "sat_eps": 4.0 / 255.0,
-        "sat_alpha": 1.0 / 255.0,
+        "output_dir": "/datastore/hoangln/KBS/checkpoints/ssl_pgdcache_mimic_medclip",
+        "sat_eps": 0.03,
+        "sat_alpha": 0.01,
         "sat_steps": 3,
         "aug_noise_std": 0.03,
         "aug_brightness": 0.20,
-        "pgd_cache_dir": "cache/pgd_vanilla_mimic_medclip",
+        "aug_affine_p": 0.7,
+        "aug_rotation_deg": 20.0,
+        "aug_translate_ratio": 0.1,
+        "aug_scale_min": 0.9,
+        "aug_scale_max": 1.1,
+        "aug_autocontrast_p": 0.2,
+        "aug_blur_sigma_min": 0.1,
+        "aug_blur_sigma_max": 1.5,
+        "aug_erasing_p": 0.2,
+        "pgd_cache_dir": "/datastore/hoangln/KBS/cache/pgd_vanilla_mimic_medclip",
     }
+)
+
+
+_COLOR_JITTER = transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.05)
+_RANDOM_ERASING = transforms.RandomErasing(
+    p=0.2,
+    scale=(0.02, 0.08),
+    ratio=(0.3, 3.3),
+    value="random",
+    inplace=False,
 )
 
 
@@ -60,17 +81,65 @@ def sat_infonce_pair(z_q: torch.Tensor, z_k: torch.Tensor, temperature: float = 
 
 def stochastic_augment(images: torch.Tensor, config: Dict) -> torch.Tensor:
     aug_images = images.clone()
+    batch_size, _, height, width = aug_images.shape
 
-    flip_mask = torch.rand(aug_images.size(0), device=aug_images.device) < 0.5
-    if flip_mask.any():
-        aug_images[flip_mask] = torch.flip(aug_images[flip_mask], dims=[3])
+    affine_p = config.get("aug_affine_p", 0.7)
+    rotation_deg = config.get("aug_rotation_deg", 20.0)
+    translate_ratio = config.get("aug_translate_ratio", 0.1)
+    scale_min = config.get("aug_scale_min", 0.9)
+    scale_max = config.get("aug_scale_max", 1.1)
 
-    brightness = config.get("aug_brightness", 0.20)
-    scale = 1.0 + (2.0 * torch.rand(aug_images.size(0), 1, 1, 1, device=aug_images.device) - 1.0) * brightness
-    aug_images = aug_images * scale
+    max_tx = int(round(translate_ratio * width))
+    max_ty = int(round(translate_ratio * height))
+
+    for i in range(batch_size):
+        if torch.rand(1, device=aug_images.device).item() < affine_p:
+            angle = float(torch.empty(1, device=aug_images.device).uniform_(-rotation_deg, rotation_deg).item())
+            tx = int(torch.randint(-max_tx, max_tx + 1, (1,), device=aug_images.device).item()) if max_tx > 0 else 0
+            ty = int(torch.randint(-max_ty, max_ty + 1, (1,), device=aug_images.device).item()) if max_ty > 0 else 0
+            scale = float(torch.empty(1, device=aug_images.device).uniform_(scale_min, scale_max).item())
+            aug_images[i] = TVF.affine(
+                aug_images[i],
+                angle=angle,
+                translate=[tx, ty],
+                scale=scale,
+                shear=[0.0, 0.0],
+                interpolation=transforms.InterpolationMode.BILINEAR,
+            )
+
+    for i in range(batch_size):
+        aug_images[i] = _COLOR_JITTER(aug_images[i])
+
+    autocontrast_p = config.get("aug_autocontrast_p", 0.2)
+    autocontrast_mask = torch.rand(batch_size, device=aug_images.device) < autocontrast_p
+    if autocontrast_mask.any():
+        selected = aug_images[autocontrast_mask]
+        channel_min = selected.amin(dim=(-2, -1), keepdim=True)
+        channel_max = selected.amax(dim=(-2, -1), keepdim=True)
+        selected = (selected - channel_min) / (channel_max - channel_min).clamp_min(1e-6)
+        aug_images[autocontrast_mask] = selected
+
+    sigma = float(
+        torch.empty(1, device=aug_images.device).uniform_(
+            config.get("aug_blur_sigma_min", 0.1),
+            config.get("aug_blur_sigma_max", 1.5),
+        ).item()
+    )
+    aug_images = TVF.gaussian_blur(aug_images, kernel_size=[3, 3], sigma=[sigma, sigma])
+
+    erasing = transforms.RandomErasing(
+        p=config.get("aug_erasing_p", 0.2),
+        scale=(0.02, 0.08),
+        ratio=(0.3, 3.3),
+        value="random",
+        inplace=False,
+    )
+    for i in range(batch_size):
+        aug_images[i] = erasing(aug_images[i])
 
     noise_std = config.get("aug_noise_std", 0.03)
-    aug_images = aug_images + noise_std * torch.randn_like(aug_images)
+    if noise_std > 0:
+        aug_images = aug_images + noise_std * torch.randn_like(aug_images)
 
     return aug_images.clamp(0.0, 1.0)
 

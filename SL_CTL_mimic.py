@@ -53,8 +53,8 @@ CONFIG = {
     "mode_pretrained": "scratch",  # scratch | ssl | at | sl
     "batch_size": 64,
     "num_workers": 4,
-    "epochs_sl": 15,
-    "epochs_ctl": 20,
+    "epochs_sl": 50,
+    "epochs_ctl": 200,
     "lr_sl": 1e-4,
     "lr_ctl": 5e-5,
     "weight_decay": 1e-4,
