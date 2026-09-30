@@ -512,41 +512,59 @@ class ENTRepModel(nn.Module):
     def download_checkpoint(self, force_download: bool = False):
         try:
             if self.mode_pretrained == "scratch":
-                file_name = "entrep.pt"
+                file_candidates = ["entrep.pt"]
                 repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel"]
             elif self.mode_pretrained == "ssl":
-                file_name = "entrep_ssl_finetuning.pt"
+                file_candidates = ["entrep_ssl_finetuning.pt"]
+                repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel"]
+            elif self.mode_pretrained == "ssl_sat":
+                file_candidates = ["entrep_ssl_sat.pth"]
                 repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel"]
             elif self.mode_pretrained == "at":
-                file_name = "entrep_AT.pth"
+                file_candidates = ["entrep_AT.pth"]
                 repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel", "Woffy/SSL-MedVLMs"]
             elif self.mode_pretrained in ("sl", "supervised"):
-                file_name = "entrep_sl.pth"
+                file_candidates = ["entrep_sl.pth"]
                 repo_candidates = ["Woffy/Medical_VLMs_SSL_CL", "Woffy/Thesis_Pretrained_Medical_Moddel"]
             else:
                 raise ValueError(
                     f"Unsupported mode_pretrained: {self.mode_pretrained}. "
-                    "Use one of: scratch, ssl, at, sl (supervised)."
+                    "Use one of: scratch, ssl, ssl_sat, at, sl (supervised)."
                 )
-            
-            print(file_name)
+
+            local_path = None
+            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            local_candidates = []
+            for file_name in file_candidates:
+                local_candidates.extend([
+                    file_name,
+                    os.path.join(os.getcwd(), file_name),
+                    os.path.join(repo_root, file_name),
+                ])
+            for candidate in local_candidates:
+                if os.path.isfile(candidate):
+                    local_path = candidate
+                    logger.info(f"Using local ENTREP checkpoint: {local_path}")
+                    return local_path
+
             last_error = None
             for repo_id in repo_candidates:
-                try:
-                    local_path = hf_hub_download(
-                        repo_id=repo_id,
-                        filename=file_name,
-                        local_dir=".",
-                        force_download=force_download,
-                    )
-                    logger.info(f"Downloaded ENTREP checkpoint from {repo_id}/{file_name}")
-                    return local_path
-                except Exception as e:
-                    last_error = e
-                    logger.warning(f"Failed to download from {repo_id}/{file_name}: {e}")
+                for file_name in file_candidates:
+                    try:
+                        local_path = hf_hub_download(
+                            repo_id=repo_id,
+                            filename=file_name,
+                            local_dir=".",
+                            force_download=force_download,
+                        )
+                        logger.info(f"Downloaded ENTREP checkpoint from {repo_id}/{file_name}")
+                        return local_path
+                    except Exception as e:
+                        last_error = e
+                        logger.warning(f"Failed to download from {repo_id}/{file_name}: {e}")
 
             raise RuntimeError(
-                f"Could not download ENTREP checkpoint '{file_name}' from any known repo"
+                f"Could not download ENTREP checkpoint from candidates {file_candidates} in any known repo"
             ) from last_error
         except Exception as e:
             logger.error(f"Failed to download ENTREP checkpoint: {e}")

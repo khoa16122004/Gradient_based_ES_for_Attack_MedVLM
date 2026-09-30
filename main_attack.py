@@ -365,7 +365,7 @@ def get_args():
         "--mode_pretrained",
         type=str,
         default='scratch',
-        choices=["scratch", "ssl", "at", "sl", "supervised"]
+        choices=["scratch", "ssl", "ssl_sat", "at", "sl", "supervised"]
     )
     # NES
     parser.add_argument("--alpha", type=float, default=0.01)

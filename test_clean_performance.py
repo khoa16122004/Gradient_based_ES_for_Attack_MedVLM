@@ -245,7 +245,7 @@ def get_args():
         "--mode_pretrained",
         type=str,
         default="scratch",
-        choices=["scratch", "ssl", "at", "sl", "supervised"]
+        choices=["scratch", "ssl", "ssl_sat", "at", "sl", "supervised"]
     )
     parser.add_argument("--epsilon", type=float, default=0.03)
     parser.add_argument("--json_path", type=str, required=True)

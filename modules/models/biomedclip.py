@@ -54,6 +54,9 @@ class BioMedCLIPModel(VisionLanguageModel):
             elif self.mode_pretrained == "ssl":
                 file_candidates = ["biomedclip_ssl_finetuning.pth"]
                 repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel"]
+            elif self.mode_pretrained == "ssl_sat":
+                file_candidates = ["biomedclip_ssl_sat.pth"]
+                repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel", "Woffy/SSL-MedVLMs"]
             elif self.mode_pretrained == "at":
                 file_candidates = ["biomedclip_AT.pth"]
                 repo_candidates = ["Woffy/Thesis_Pretrained_Medical_Moddel", "Woffy/SSL-MedVLMs"]
@@ -64,7 +67,7 @@ class BioMedCLIPModel(VisionLanguageModel):
             else:
                 raise ValueError(
                     f"Unsupported mode_pretrained: {self.mode_pretrained}. "
-                    "Use one of: scratch, ssl, at, sl (supervised)."
+                    "Use one of: scratch, ssl, ssl_sat, at, sl (supervised)."
                 )
 
             local_path = None
