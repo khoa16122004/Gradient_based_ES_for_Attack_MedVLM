@@ -5,7 +5,7 @@ from typing import Dict
 
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, Subset
 from torchvision import transforms
 import torchvision.transforms.functional as TVF
 from tqdm import tqdm
@@ -344,6 +344,34 @@ def train_ssl_pgd_cache_stage(backbone_model, train_loader, config: Dict):
         print(f"[SSL+PGDCache][Epoch {epoch}/{config['epochs_sl']}] train_loss={train_loss:.4f}")
 
 
+def maybe_limit_sl_loader(train_loader: DataLoader, config: Dict) -> DataLoader:
+    sl_num_samples = config.get("sl_num_samples")
+    if sl_num_samples is None:
+        return train_loader
+
+    total = len(train_loader.dataset)
+    if sl_num_samples <= 0:
+        raise ValueError("sl_num_samples must be > 0 when provided.")
+    if sl_num_samples >= total:
+        print(f"[SSL+PGDCache] sl_num_samples={sl_num_samples} >= dataset size={total}; using full dataset.")
+        return train_loader
+
+    generator = torch.Generator()
+    generator.manual_seed(config["seed"])
+    indices = torch.randperm(total, generator=generator)[:sl_num_samples].tolist()
+    subset = Subset(train_loader.dataset, indices)
+
+    print(f"[SSL+PGDCache] Using {len(subset)}/{total} samples for SL stage.")
+    return DataLoader(
+        subset,
+        batch_size=train_loader.batch_size,
+        shuffle=True,
+        num_workers=train_loader.num_workers,
+        pin_memory=train_loader.pin_memory,
+        drop_last=train_loader.drop_last,
+    )
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Train MIMIC with SSL+PGDCache stage-1 + CTL stage-2")
     parser.add_argument(
@@ -366,6 +394,12 @@ def parse_args():
         action="store_true",
         help="Force rebuild PGD cache even if files already exist.",
     )
+    parser.add_argument(
+        "--sl-num-samples",
+        type=int,
+        default=None,
+        help="Number of randomly selected training samples used only for SSL stage. If omitted, use full train set.",
+    )
     return parser.parse_args()
 
 
@@ -383,6 +417,8 @@ def main():
         config["sat_steps"] = args.sat_steps
     if args.pgd_cache_dir is not None:
         config["pgd_cache_dir"] = args.pgd_cache_dir
+    if args.sl_num_samples is not None:
+        config["sl_num_samples"] = args.sl_num_samples
 
     setup_seed(config["seed"])
     print_config(config)
@@ -395,6 +431,7 @@ def main():
     train_loader_ssl = build_cached_ssl_loader(config)
 
     if config["run_sl_stage"]:
+        train_loader_ssl = maybe_limit_sl_loader(train_loader_ssl, config)
         train_ssl_pgd_cache_stage(backbone_model, train_loader_ssl, config)
 
     if config["run_ctl_stage"]:
