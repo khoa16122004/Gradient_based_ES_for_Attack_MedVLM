@@ -22,7 +22,7 @@ CONFIG = {
     "model_name": "entrep",
     "dataset_name": "entrep",
     "mode_pretrained": "scratch",
-    "batch_size": 64,
+    "batch_size": 32,
     "num_workers": 0,
     "epochs_sl": 50,
     "epochs_clip": 200,
