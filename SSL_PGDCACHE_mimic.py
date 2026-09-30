@@ -185,22 +185,49 @@ def _cache_file_path(cache_root: Path, split: str, filename: str) -> Path:
     return cache_root / split / Path(filename).with_suffix(".pt")
 
 
+def _select_sl_subset_indices(total: int, config: Dict):
+    sl_num_samples = config.get("sl_num_samples")
+    if sl_num_samples is None:
+        return None
+
+    if sl_num_samples <= 0:
+        raise ValueError("sl_num_samples must be > 0 when provided.")
+    if sl_num_samples >= total:
+        return None
+
+    generator = torch.Generator()
+    generator.manual_seed(config["seed"])
+    return torch.randperm(total, generator=generator)[:sl_num_samples].tolist()
+
+
 def precompute_and_cache_pgd(model, config: Dict, force_rebuild: bool = False):
     cache_root = _resolve_path(config["pgd_cache_dir"])
     split = config["data"]["train_split"]
     dataset = _build_train_dataset(config)
+    subset_indices = _select_sl_subset_indices(len(dataset), config)
+
+    if subset_indices is None:
+        dataset_for_cache = dataset
+        target_filenames = dataset.df["filename"].tolist()
+        print(f"[SSL+PGDCache] Build cache for full train set: {len(target_filenames)} samples.")
+    else:
+        dataset_for_cache = Subset(dataset, subset_indices)
+        target_filenames = dataset.df.iloc[subset_indices]["filename"].tolist()
+        print(
+            f"[SSL+PGDCache] Build cache for SL subset: {len(target_filenames)}/{len(dataset)} samples "
+            f"(seed={config['seed']})."
+        )
 
     if not force_rebuild and cache_root.exists():
         split_cache_root = cache_root / split
-        train_filenames = dataset.df["filename"].tolist()
-        all_cached = all((split_cache_root / Path(name).with_suffix(".pt")).exists() for name in train_filenames)
+        all_cached = all((split_cache_root / Path(name).with_suffix(".pt")).exists() for name in target_filenames)
         if all_cached:
             print(f"PGD cache already complete at: {split_cache_root}. Skip precompute.")
             return
 
     pin_memory = torch.cuda.is_available()
     loader = DataLoader(
-        dataset,
+        dataset_for_cache,
         batch_size=config["batch_size"],
         shuffle=False,
         num_workers=config["num_workers"],
@@ -209,8 +236,10 @@ def precompute_and_cache_pgd(model, config: Dict, force_rebuild: bool = False):
     )
 
     if force_rebuild and cache_root.exists():
-        for existing_file in cache_root.rglob("*.pt"):
-            existing_file.unlink()
+        for filename in target_filenames:
+            cache_file = _cache_file_path(cache_root, split, filename)
+            if cache_file.exists():
+                cache_file.unlink()
 
     model.eval()
 
@@ -238,7 +267,7 @@ def precompute_and_cache_pgd(model, config: Dict, force_rebuild: bool = False):
             created += 1
 
     print(f"PGD cache ready at: {cache_root}")
-    print(f"PGD cache stats: created={created}, skipped={skipped}")
+    print(f"PGD cache stats: target={len(target_filenames)}, created={created}, skipped={skipped}")
 
 
 class MIMICCachedPGDDataset(Dataset):
@@ -345,23 +374,13 @@ def train_ssl_pgd_cache_stage(backbone_model, train_loader, config: Dict):
 
 
 def maybe_limit_sl_loader(train_loader: DataLoader, config: Dict) -> DataLoader:
-    sl_num_samples = config.get("sl_num_samples")
-    if sl_num_samples is None:
+    indices = _select_sl_subset_indices(len(train_loader.dataset), config)
+    if indices is None:
         return train_loader
 
-    total = len(train_loader.dataset)
-    if sl_num_samples <= 0:
-        raise ValueError("sl_num_samples must be > 0 when provided.")
-    if sl_num_samples >= total:
-        print(f"[SSL+PGDCache] sl_num_samples={sl_num_samples} >= dataset size={total}; using full dataset.")
-        return train_loader
-
-    generator = torch.Generator()
-    generator.manual_seed(config["seed"])
-    indices = torch.randperm(total, generator=generator)[:sl_num_samples].tolist()
     subset = Subset(train_loader.dataset, indices)
 
-    print(f"[SSL+PGDCache] Using {len(subset)}/{total} samples for SL stage.")
+    print(f"[SSL+PGDCache] Using {len(subset)}/{len(train_loader.dataset)} samples for SL stage.")
     return DataLoader(
         subset,
         batch_size=train_loader.batch_size,
