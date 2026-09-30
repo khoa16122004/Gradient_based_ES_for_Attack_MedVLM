@@ -178,6 +178,12 @@ def _cache_file_path(cache_root: Path, sample_idx: int) -> Path:
 def precompute_and_cache_pgd(model, dataset, config: dict, force_rebuild: bool = False):
     cache_root = _resolve_path(config["pgd_cache_dir"])
 
+    if not force_rebuild and cache_root.exists():
+        all_cached = all(_cache_file_path(cache_root, i).exists() for i in range(len(dataset)))
+        if all_cached:
+            print(f"PGD cache already complete at: {cache_root}. Skip precompute.")
+            return
+
     ordered_loader = DataLoader(
         dataset,
         batch_size=config["batch_size"],

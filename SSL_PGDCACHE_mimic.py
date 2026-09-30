@@ -121,6 +121,14 @@ def precompute_and_cache_pgd(model, config: Dict, force_rebuild: bool = False):
     split = config["data"]["train_split"]
     dataset = _build_train_dataset(config)
 
+    if not force_rebuild and cache_root.exists():
+        split_cache_root = cache_root / split
+        train_filenames = dataset.df["filename"].tolist()
+        all_cached = all((split_cache_root / Path(name).with_suffix(".pt")).exists() for name in train_filenames)
+        if all_cached:
+            print(f"PGD cache already complete at: {split_cache_root}. Skip precompute.")
+            return
+
     pin_memory = torch.cuda.is_available()
     loader = DataLoader(
         dataset,
